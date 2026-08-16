@@ -4,10 +4,6 @@
       <stop offset="0" stop-color="#5b95ff" />
       <stop offset="1" stop-color="#1740c4" />
     </linearGradient>
-    <linearGradient id="peel-icon" x1="1" y1="1" x2="0" y2="0">
-      <stop offset="0" stop-color="#bcd0f7" />
-      <stop offset="1" stop-color="#eaf1ff" />
-    </linearGradient>
       <clipPath id="tile-clip">
         <rect x="0" y="0" width="512" height="512" rx="114" />
       </clipPath>
@@ -18,7 +14,5 @@
       <path d="M -62 -132 Q -62 -150 -44 -150 L 44 -150 Q 62 -150 62 -132 L 62 78 L 10 152 Q 0 164 -10 152 L -62 78 Z" fill="#ffffff" />
       <path d="M -62 78 L 62 78" stroke="#2563eb" stroke-width="9" stroke-opacity="0.28" stroke-linecap="round" />
     </g>
-      <path d="M 276 512 Q 408.16 408.16 512 276 L 512 512 Z" fill="url(#peel-icon)" />
-      <path d="M 276 512 Q 408.16 408.16 512 276" fill="none" stroke="#1740c4" stroke-width="7" stroke-opacity="0.28" />
     </g>
   </svg>

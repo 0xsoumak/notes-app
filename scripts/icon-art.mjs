@@ -1,10 +1,9 @@
 /**
  * The app icon, as geometry rather than a checked-in binary.
  *
- * A white pencil on a blue tile whose bottom-right corner peels back like a
- * sheet of paper. Everything is expressed against a 512-unit square so the
- * same source scales to a 16px favicon and a 512px install icon without a
- * second drawing.
+ * A white pencil on a plain blue tile. Everything is expressed against a
+ * 512-unit square so the same source scales to a 16px favicon and a 512px
+ * install icon without a second drawing.
  */
 
 const SIZE = 512
@@ -15,24 +14,17 @@ export const COLORS = {
   blueLight: '#5b95ff',
   blue: '#2563eb',
   blueDeep: '#1740c4',
-  /* The peeled corner: the underside of the sheet, lit from the fold. */
-  peelLight: '#eaf1ff',
-  peelShade: '#bcd0f7',
   ink: '#ffffff',
 }
 
 /**
- * Gradients are declared once per SVG. Ids are suffixed so two drawings can
- * share a document without colliding.
+ * The tile gradient, declared once per SVG. The id is suffixed so two
+ * drawings can share a document without colliding.
  */
 function defs(id) {
   return `<linearGradient id="tile-${id}" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="${COLORS.blueLight}" />
       <stop offset="1" stop-color="${COLORS.blueDeep}" />
-    </linearGradient>
-    <linearGradient id="peel-${id}" x1="1" y1="1" x2="0" y2="0">
-      <stop offset="0" stop-color="${COLORS.peelShade}" />
-      <stop offset="1" stop-color="${COLORS.peelLight}" />
     </linearGradient>`
 }
 
@@ -75,26 +67,6 @@ function pencil(scale = 1) {
     </g>`
 }
 
-/**
- * The bottom-right corner lifted off the tile. The flap is the triangle the
- * corner would occupy; the rounded rect clip trims its outer point back to
- * the tile's own radius, so no separate corner geometry is needed.
- */
-function peel() {
-  // The tile's own 114-unit corner radius eats the point of this triangle, so
-  // the fold has to reach well past it to leave a flap with any body to it.
-  const fold = 236
-  const edge = SIZE - fold
-  // The fold line bows towards the corner, so the flap is pinched in the
-  // middle the way a lifted sheet is — a straight line reads as a cut corner.
-  const bend = edge + fold * 0.56
-
-  const foldLine = `M ${edge} ${SIZE} Q ${bend} ${bend} ${SIZE} ${edge}`
-
-  return `<path d="${foldLine} L ${SIZE} ${SIZE} Z" fill="url(#peel-icon)" />
-      <path d="${foldLine}" fill="none" stroke="${COLORS.blueDeep}" stroke-width="7" stroke-opacity="0.28" />`
-}
-
 /** Full-bleed icon: the tile fills the canvas, rounded like an app tile. */
 export function iconSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}" role="img" aria-label="Notes">
@@ -107,7 +79,6 @@ export function iconSvg() {
     <g clip-path="url(#tile-clip)">
       <rect x="0" y="0" width="${SIZE}" height="${SIZE}" fill="url(#tile-icon)" />
       ${pencil(1.08)}
-      ${peel()}
     </g>
   </svg>`
 }
@@ -115,8 +86,7 @@ export function iconSvg() {
 /**
  * Maskable icon: the platform crops this to its own shape (circle, squircle,
  * rounded square), so the tile runs edge to edge and the pencil is pulled
- * into the safe zone — the centre 80%. The peeled corner is left off; it sits
- * exactly where every mask cuts, so it would survive as a smear at best.
+ * into the safe zone — the centre 80%.
  */
 export function maskableSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIZE} ${SIZE}" width="${SIZE}" height="${SIZE}" role="img" aria-label="Notes">
