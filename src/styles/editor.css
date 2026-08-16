@@ -1,0 +1,9 @@
+/*
+ * Tweaks to BlockNote's own chrome. Loaded after its stylesheets so these win.
+ * Plain CSS on purpose — this file sits outside the Tailwind import graph.
+ */
+
+/* Strip BlockNote's page padding; our page container owns the gutters. */
+.bn-editor {
+  padding-inline: 0;
+}
