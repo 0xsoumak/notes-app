@@ -26,7 +26,7 @@ export function NoteTitle({ title, icon, onTitleChange, onIconChange, onCommit }
   }
 
   return (
-    <header className="mb-2">
+    <header className="mb-2 flex items-center gap-2">
       <NoteIconPicker icon={icon} onChange={onIconChange} />
 
       <textarea
@@ -42,7 +42,7 @@ export function NoteTitle({ title, icon, onTitleChange, onIconChange, onCommit }
         placeholder="Untitled"
         aria-label="Note title"
         spellCheck={false}
-        className="placeholder:text-content-muted/50 field-sizing-content mt-2 w-full resize-none bg-transparent text-4xl leading-tight font-bold outline-none"
+        className="placeholder:text-content-muted/50 field-sizing-content min-w-0 flex-1 resize-none bg-transparent text-4xl leading-tight font-bold outline-none"
       />
     </header>
   )

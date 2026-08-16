@@ -19,12 +19,22 @@ const SAVE_DEBOUNCE_MS = 600
 export function useNote(path: string | undefined) {
   const { items } = useWorkspace()
 
-  // Normalised to `null` for "no such note", so `undefined` means only one
-  // thing: the query has not resolved yet.
-  const file = useLiveQuery(
-    async () => (path && isNotePath(path) ? ((await db.files.get(path)) ?? null) : null),
+  // `useLiveQuery` keeps serving the previous result while a re-run triggered by
+  // a new `path` is in flight, so the result is tagged with the path it was read
+  // for. Without that tag the hook would briefly report the *previous* note's
+  // body under the new path, and the editor — which seeds itself once on mount —
+  // would hydrate from it and never correct itself.
+  const result = useLiveQuery(
+    async () => ({
+      path,
+      file: path && isNotePath(path) ? ((await db.files.get(path)) ?? null) : null,
+    }),
     [path],
   )
+
+  // Normalised to `null` for "no such note", so `undefined` means only one
+  // thing: no resolved read for the current path yet.
+  const file = result?.path === path ? result.file : undefined
 
   const item = items.find((candidate) => candidate.id === path)
   const note = item && isNote(item) ? item : null

@@ -35,13 +35,13 @@ export function NoteIconPicker({ icon, onChange }: NoteIconPickerProps) {
   }, [isOpen])
 
   return (
-    <div ref={containerRef} className="relative w-fit">
+    <div ref={containerRef} className="relative w-fit shrink-0">
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
         aria-label="Change note icon"
         aria-expanded={isOpen}
-        className="hover:bg-surface-hover cursor-pointer rounded-lg p-1 text-5xl leading-none transition"
+        className="hover:bg-surface-hover block cursor-pointer rounded-lg p-1 text-4xl leading-none transition"
       >
         {icon}
       </button>

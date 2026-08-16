@@ -1,4 +1,4 @@
-import { decodeBase64, encodeBase64 } from './base64'
+import { decodeBase64 } from './base64'
 import type { GitHubConfig } from './github-config'
 import { GitHubError } from './github-errors'
 
@@ -24,10 +24,17 @@ export interface RemoteFile {
   sha: string
 }
 
-export interface FileMove {
-  from: string
-  to: string
-}
+/**
+ * One change to stage into the next commit. Everything the sync engine wants
+ * to push is expressed as these, so a whole sync collapses into one commit.
+ */
+export type TreeChange =
+  | { kind: 'write'; path: string; content: string }
+  | { kind: 'remove'; path: string }
+  | { kind: 'move'; from: string; to: string }
+
+/** Blob mode for an ordinary non-executable file. */
+const FILE_MODE = '100644'
 
 export function createGitHubClient(config: GitHubConfig) {
   const { owner, repo, branch, token } = config
@@ -87,45 +94,20 @@ export function createGitHubClient(config: GitHubConfig) {
     },
 
     /**
-     * Creates or updates a file. `sha` must be the SHA we last saw for an
-     * existing file; omit it when creating.
-     */
-    async writeFile(
-      path: string,
-      content: string,
-      sha: string | null,
-      message: string,
-    ): Promise<string> {
-      const data = await request<{ content: { sha: string } }>(
-        `${repoRoot}/contents/${encodePath(path)}`,
-        {
-          method: 'PUT',
-          body: JSON.stringify({
-            message,
-            content: encodeBase64(content),
-            branch,
-            ...(sha ? { sha } : {}),
-          }),
-        },
-      )
-      return data.content.sha
-    },
-
-    async deleteFile(path: string, sha: string, message: string): Promise<void> {
-      await request<unknown>(`${repoRoot}/contents/${encodePath(path)}`, {
-        method: 'DELETE',
-        body: JSON.stringify({ message, sha, branch }),
-      })
-    },
-
-    /**
-     * Moves many files in a single commit via the Git Data API.
+     * Applies every change as a single commit via the Git Data API.
      *
-     * Renaming a folder with fifty notes inside is one commit and four
-     * requests this way, instead of a hundred contents-API calls.
+     * The contents API commits once per call, so pushing edits that way turns
+     * one sync into a wall of commits. Building a tree instead keeps a sync of
+     * any size to one commit and five requests.
+     *
+     * Returns the resulting `path → blob sha` map so callers can refresh the
+     * SHAs they track, or `null` when there was nothing to commit.
      */
-    async moveFiles(moves: FileMove[], message: string): Promise<void> {
-      if (moves.length === 0) return
+    async commitChanges(
+      changes: TreeChange[],
+      message: string,
+    ): Promise<Map<string, string> | null> {
+      if (changes.length === 0) return null
 
       const ref = await request<{ object: { sha: string } }>(
         `${repoRoot}/git/ref/heads/${encodeURIComponent(branch)}`,
@@ -137,27 +119,63 @@ export function createGitHubClient(config: GitHubConfig) {
       )
       const baseTreeSha = headCommit.tree.sha
 
-      const current = await request<{ tree: RemoteEntry[] }>(
+      const base = await request<{ tree: RemoteEntry[] }>(
         `${repoRoot}/git/trees/${baseTreeSha}?recursive=1`,
       )
       const blobs = new Map(
-        current.tree.filter((entry) => entry.type === 'blob').map((entry) => [entry.path, entry]),
+        base.tree.filter((entry) => entry.type === 'blob').map((entry) => [entry.path, entry]),
       )
 
-      // `sha: null` removes a path; re-adding the same blob sha at the new
-      // path is what makes this a move rather than a copy.
-      const changes: Record<string, unknown>[] = []
-      for (const move of moves) {
-        const blob = blobs.get(move.from)
+      // Collected per path so a file that was both moved and edited resolves to
+      // one entry — the new content at the new path — instead of two that race.
+      const additions = new Map<string, Record<string, unknown>>()
+      const removals = new Set<string>()
+
+      // Moves first: a write to the same path must win over the copied blob.
+      for (const change of changes) {
+        if (change.kind !== 'move') continue
+        const blob = blobs.get(change.from)
+        // Nothing upstream to move; if the file is also dirty its write below
+        // creates it at the new path anyway.
         if (!blob) continue
-        changes.push({ path: move.to, mode: blob.mode, type: 'blob', sha: blob.sha })
-        changes.push({ path: move.from, mode: blob.mode, type: 'blob', sha: null })
+        additions.set(change.to, {
+          path: change.to,
+          mode: blob.mode,
+          type: 'blob',
+          sha: blob.sha,
+        })
+        removals.add(change.from)
       }
-      if (changes.length === 0) return
+
+      for (const change of changes) {
+        if (change.kind === 'write') {
+          // Inline `content` lets the tree call create the blob for us, so
+          // there is no separate blob request per file.
+          additions.set(change.path, {
+            path: change.path,
+            mode: FILE_MODE,
+            type: 'blob',
+            content: change.content,
+          })
+        } else if (change.kind === 'remove') {
+          removals.add(change.path)
+        }
+      }
+
+      const tree = [...additions.values()]
+      for (const path of removals) {
+        // A path being re-added in this same commit is a move's source only
+        // when nothing else put content there.
+        if (additions.has(path)) continue
+        const blob = blobs.get(path)
+        if (!blob) continue
+        tree.push({ path, mode: blob.mode, type: 'blob', sha: null })
+      }
+      if (tree.length === 0) return null
 
       const newTree = await request<{ sha: string }>(`${repoRoot}/git/trees`, {
         method: 'POST',
-        body: JSON.stringify({ base_tree: baseTreeSha, tree: changes }),
+        body: JSON.stringify({ base_tree: baseTreeSha, tree }),
       })
 
       const commit = await request<{ sha: string }>(`${repoRoot}/git/commits`, {
@@ -165,10 +183,19 @@ export function createGitHubClient(config: GitHubConfig) {
         body: JSON.stringify({ message, tree: newTree.sha, parents: [headCommitSha] }),
       })
 
+      // Fast-forward only: if the branch moved under us this fails rather than
+      // clobbering the commit we never saw.
       await request<unknown>(`${repoRoot}/git/refs/heads/${encodeURIComponent(branch)}`, {
         method: 'PATCH',
         body: JSON.stringify({ sha: commit.sha }),
       })
+
+      const written = await request<{ tree: RemoteEntry[] }>(
+        `${repoRoot}/git/trees/${newTree.sha}?recursive=1`,
+      )
+      return new Map(
+        written.tree.filter((entry) => entry.type === 'blob').map((entry) => [entry.path, entry.sha]),
+      )
     },
   }
 }

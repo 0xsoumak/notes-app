@@ -1,15 +1,11 @@
 /**
- * GitHub exchanges file contents as base64. `atob`/`btoa` are byte-oriented,
- * so UTF-8 has to be encoded and decoded explicitly — otherwise any non-ASCII
- * character (an emoji in a note, say) corrupts on round-trip.
+ * GitHub hands file contents back as base64. `atob` is byte-oriented, so UTF-8
+ * has to be decoded explicitly — otherwise any non-ASCII character (an emoji in
+ * a note, say) corrupts on the way in.
+ *
+ * There is no encoder here: writes go through the Git Data API, which takes
+ * file content as plain UTF-8.
  */
-
-export function encodeBase64(text: string): string {
-  const bytes = new TextEncoder().encode(text)
-  let binary = ''
-  for (const byte of bytes) binary += String.fromCharCode(byte)
-  return btoa(binary)
-}
 
 export function decodeBase64(base64: string): string {
   // The API pretty-prints base64 with newlines; atob rejects them.

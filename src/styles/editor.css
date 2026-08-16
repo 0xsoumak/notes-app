@@ -3,7 +3,13 @@
  * Plain CSS on purpose — this file sits outside the Tailwind import graph.
  */
 
-/* Strip BlockNote's page padding; our page container owns the gutters. */
+/*
+ * Strip BlockNote's page padding and its own card background — our page
+ * container owns the gutters, and the body should sit flat on the page rather
+ * than read as a boxed input. The `--bn-colors-editor-background` token itself
+ * is left alone: BlockNote color-mixes it for the selection highlight.
+ */
 .bn-editor {
   padding-inline: 0;
+  background-color: transparent;
 }

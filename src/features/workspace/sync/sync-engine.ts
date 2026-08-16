@@ -1,7 +1,6 @@
 import { db, type LocalFile } from '../data/db'
-import { createGitHubClient, type FileMove } from '../github/github-client'
+import { createGitHubClient, type TreeChange } from '../github/github-client'
 import type { GitHubConfig } from '../github/github-config'
-import { GitHubError } from '../github/github-errors'
 
 export interface SyncReport {
   pulled: number
@@ -12,8 +11,13 @@ export interface SyncReport {
   warnings: string[]
 }
 
-function commitMessage(action: string, path: string): string {
-  return `${action}(note): ${path}`
+/**
+ * A one-line subject when a sync carries a single change, and a summary with
+ * the details in the body when it carries several.
+ */
+function commitMessage(lines: string[]): string {
+  if (lines.length === 1) return `sync(note): ${lines[0]}`
+  return `sync(notes): ${lines.length} changes\n\n${lines.join('\n')}`
 }
 
 /**
@@ -88,93 +92,98 @@ async function pull(client: Client, entries: RemoteEntries, report: SyncReport):
   }
 }
 
+/**
+ * Sends every pending deletion, move and edit upstream as a single commit.
+ *
+ * The batch is all-or-nothing: one bad file fails the whole push rather than
+ * landing a partial commit. Local rows are only marked clean once the commit
+ * is on the branch, so a failed sync leaves everything pending and the next
+ * press retries it.
+ */
 async function push(client: Client, report: SyncReport): Promise<void> {
   const files = await db.files.toArray()
 
-  await pushDeletes(client, files, report)
-  await pushMoves(client, files, report)
-  await pushWrites(client, report)
-}
-
-async function pushDeletes(
-  client: Client,
-  files: LocalFile[],
-  report: SyncReport,
-): Promise<void> {
   const deletions = files.filter((file) => file.isDeleted === 1)
-
-  for (const file of deletions) {
-    if (file.remotePath && file.sha) {
-      try {
-        await client.deleteFile(file.remotePath, file.sha, commitMessage('delete', file.remotePath))
-        report.deleted += 1
-      } catch (error) {
-        if (!(error instanceof GitHubError && error.isNotFound)) {
-          report.warnings.push(`Could not delete ${file.remotePath}: ${messageOf(error)}`)
-          continue
-        }
-        // Already gone remotely — dropping the local row is still correct.
-      }
-    }
-    await db.files.delete(file.path)
-  }
-}
-
-async function pushMoves(client: Client, files: LocalFile[], report: SyncReport): Promise<void> {
-  const moved = files.filter(
+  const moves = files.filter(
     (file) => file.isDeleted === 0 && file.remotePath !== null && file.remotePath !== file.path,
   )
-  if (moved.length === 0) return
+  const writes = files.filter((file) => file.isDirty === 1 && file.isDeleted === 0)
 
-  const moves: FileMove[] = moved.map((file) => ({ from: file.remotePath!, to: file.path }))
-  const message =
-    moves.length === 1
-      ? `move(note): ${moves[0].from} → ${moves[0].to}`
-      : `move(note): ${moves.length} files`
+  const changes: TreeChange[] = []
+  const summary: string[] = []
 
-  try {
-    // One commit for the whole batch, so renaming a folder is not N commits.
-    await client.moveFiles(moves, message)
-    await db.files.bulkPut(moved.map((file) => ({ ...file, remotePath: file.path })))
-    report.moved += moves.length
-  } catch (error) {
-    report.warnings.push(`Could not move files: ${messageOf(error)}`)
+  for (const file of deletions) {
+    // Never pushed, so there is nothing upstream to remove.
+    if (!file.remotePath) continue
+    changes.push({ kind: 'remove', path: file.remotePath })
+    summary.push(`delete ${file.remotePath}`)
   }
-}
 
-async function pushWrites(client: Client, report: SyncReport): Promise<void> {
-  // Re-read: the move step above rewrote remotePath on some rows.
-  const pending = (await db.files.toArray()).filter(
-    (file) => file.isDirty === 1 && file.isDeleted === 0,
-  )
+  for (const file of moves) {
+    changes.push({ kind: 'move', from: file.remotePath!, to: file.path })
+    summary.push(`move ${file.remotePath!} → ${file.path}`)
+  }
 
-  for (const file of pending) {
+  for (const file of writes) {
+    changes.push({ kind: 'write', path: file.path, content: file.content })
+    // A moved-and-edited file is already listed as a move; don't count it twice.
+    if (!moves.includes(file)) summary.push(`${file.sha ? 'update' : 'create'} ${file.path}`)
+  }
+
+  if (changes.length > 0) {
     try {
-      const sha = await writeWithConflictRetry(client, file)
-      await db.files.put({ ...file, sha, remotePath: file.path, isDirty: 0 })
-      report.pushed += 1
+      const shas = await client.commitChanges(changes, commitMessage(summary))
+      await settle(deletions, [...new Set([...moves, ...writes])], shas)
     } catch (error) {
-      report.warnings.push(`Could not push ${file.path}: ${messageOf(error)}`)
+      report.warnings.push(`Could not push changes: ${messageOf(error)}`)
+      return
     }
+  } else if (deletions.length > 0) {
+    // Only ever-local files were deleted, so there is nothing to commit — the
+    // rows still have to go.
+    await db.files.bulkDelete(deletions.map((file) => file.path))
   }
+
+  report.deleted += deletions.length
+  report.moved += moves.length
+  report.pushed += writes.length
 }
 
 /**
- * Writes a file, retrying once against the current remote SHA if GitHub
- * rejects our stale one. The retry re-asserts the local version, matching the
- * local-wins policy.
+ * Brings local rows in line with the commit that just landed.
+ *
+ * Rows are re-read inside the transaction and compared against what was
+ * actually sent: an edit typed while the request was in flight keeps its dirty
+ * flag instead of being marked clean and stranded until the next edit.
  */
-async function writeWithConflictRetry(client: Client, file: LocalFile): Promise<string> {
-  const message = commitMessage(file.sha ? 'update' : 'create', file.path)
+async function settle(
+  deletions: LocalFile[],
+  pushed: LocalFile[],
+  shas: Map<string, string> | null,
+): Promise<void> {
+  await db.transaction('rw', db.files, async () => {
+    await db.files.bulkDelete(deletions.map((file) => file.path))
+    if (pushed.length === 0) return
 
-  try {
-    return await client.writeFile(file.path, file.content, file.sha, message)
-  } catch (error) {
-    if (!(error instanceof GitHubError) || !error.isConflict) throw error
+    const current = await db.files.bulkGet(pushed.map((file) => file.path))
+    const updates: LocalFile[] = []
 
-    const current = await client.readFile(file.path).catch(() => null)
-    return client.writeFile(file.path, file.content, current?.sha ?? null, message)
-  }
+    for (const [index, sent] of pushed.entries()) {
+      const row = current[index]
+      if (!row || row.isDeleted === 1) continue
+
+      updates.push({
+        ...row,
+        remotePath: sent.path,
+        // Missing only if the new tree came back truncated; keeping the old SHA
+        // costs at most one redundant pull next sync.
+        sha: shas?.get(sent.path) ?? row.sha,
+        isDirty: row.content === sent.content ? 0 : 1,
+      })
+    }
+
+    if (updates.length > 0) await db.files.bulkPut(updates)
+  })
 }
 
 function messageOf(error: unknown): string {
