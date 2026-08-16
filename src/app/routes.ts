@@ -9,4 +9,3 @@ export function noteRoute(path: string): string {
 }
 
 export const HOME_ROUTE = '/'
-export const SETTINGS_ROUTE = '/settings'

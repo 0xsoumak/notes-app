@@ -31,7 +31,7 @@ export function NoteEditor({
   onTitleChange,
   onIconChange,
 }: NoteEditorProps) {
-  const { theme } = useTheme()
+  const { resolvedTheme } = useTheme()
   const [isHydrated, setIsHydrated] = useState(false)
 
   // Hydration replaces the document, which fires onChange. Without this guard
@@ -78,7 +78,7 @@ export function NoteEditor({
       />
 
       <div className={isHydrated ? undefined : 'invisible'}>
-        <BlockNoteView editor={editor} theme={theme} onChange={() => void handleChange()} />
+        <BlockNoteView editor={editor} theme={resolvedTheme} onChange={() => void handleChange()} />
       </div>
     </article>
   )

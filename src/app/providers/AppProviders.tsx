@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { BrowserRouter } from 'react-router'
 import { CommandMenuProvider } from '@/features/command-menu'
+import { SettingsDialogProvider } from '@/features/settings'
 import { SyncProvider, WorkspaceProvider } from '@/features/workspace'
 import { ThemeProvider } from './ThemeProvider'
 
@@ -15,8 +16,10 @@ export function AppProviders({ children }: AppProvidersProps) {
       <ThemeProvider>
         <WorkspaceProvider>
           <SyncProvider>
-            {/* Innermost: its actions read from every provider above it. */}
-            <CommandMenuProvider>{children}</CommandMenuProvider>
+            <SettingsDialogProvider>
+              {/* Innermost: its actions read from every provider above it. */}
+              <CommandMenuProvider>{children}</CommandMenuProvider>
+            </SettingsDialogProvider>
           </SyncProvider>
         </WorkspaceProvider>
       </ThemeProvider>

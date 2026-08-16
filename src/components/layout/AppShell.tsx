@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router'
 import { IconButton } from '@/components/ui/IconButton'
 import { SearchIcon, SidebarIcon } from '@/components/ui/icons'
 import { useCommandMenu } from '@/features/command-menu'
+import { useSettingsDialog } from '@/features/settings'
 import { SyncFab } from '@/features/workspace'
 import { cn } from '@/lib/cn'
 import { useMediaQuery } from '@/lib/hooks/use-media-query'
@@ -22,6 +23,7 @@ export function AppShell() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(isDesktop)
   const { pathname } = useLocation()
   const commandMenu = useCommandMenu()
+  const settingsDialog = useSettingsDialog()
 
   // Crossing the breakpoint resets to that layout's natural state: open on
   // desktop, out of the way on mobile.
@@ -106,7 +108,7 @@ export function AppShell() {
         </main>
 
         {/* Outside <main> so it stays put while the note scrolls under it. */}
-        <SyncFab />
+        <SyncFab onConnect={() => settingsDialog.open('github')} />
       </div>
     </div>
   )

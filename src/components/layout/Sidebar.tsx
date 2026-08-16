@@ -1,9 +1,9 @@
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { noteRoute } from '@/app/routes'
 import { IconButton } from '@/components/ui/IconButton'
-import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { NewFolderIcon, NewNoteIcon, SearchIcon, SettingsIcon, XIcon } from '@/components/ui/icons'
 import { COMMAND_MENU_SHORTCUT, useCommandMenu } from '@/features/command-menu'
+import { useSettingsDialog } from '@/features/settings'
 import { SyncButton, TreeView, useExpandedIds, useNotePath, useWorkspace } from '@/features/workspace'
 import { cn } from '@/lib/cn'
 
@@ -18,6 +18,7 @@ export function Sidebar({ onClose }: SidebarProps) {
   const activeNoteId = useNotePath()
   const navigate = useNavigate()
   const commandMenu = useCommandMenu()
+  const settingsDialog = useSettingsDialog()
 
   const handleCreateNote = async () => {
     const path = await createNote(null)
@@ -34,7 +35,6 @@ export function Sidebar({ onClose }: SidebarProps) {
         <IconButton label="New folder" onClick={() => void createFolder(null)}>
           <NewFolderIcon className="size-4" />
         </IconButton>
-        <ThemeToggle />
         {onClose && (
           <IconButton label="Close navigation" onClick={onClose}>
             <XIcon className="size-4" />
@@ -79,14 +79,15 @@ export function Sidebar({ onClose }: SidebarProps) {
       </nav>
 
       <div className="border-border-subtle space-y-1 border-t px-2 py-2">
-        <SyncButton />
-        <Link
-          to="/settings"
-          className="text-content-muted hover:bg-surface-hover hover:text-content flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition"
+        <SyncButton onConnect={() => settingsDialog.open('github')} />
+        <button
+          type="button"
+          onClick={() => settingsDialog.open()}
+          className="text-content-muted hover:bg-surface-hover hover:text-content flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition"
         >
           <SettingsIcon className="size-4" />
           Settings
-        </Link>
+        </button>
       </div>
     </aside>
   )

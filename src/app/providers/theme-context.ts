@@ -1,10 +1,14 @@
 import { createContext, use } from 'react'
 
-export type Theme = 'light' | 'dark'
+/** What the user picked. `system` tracks the OS setting rather than fixing one. */
+export type ThemePreference = 'system' | 'light' | 'dark'
+/** What's actually painted — `system` resolved against the OS at read time. */
+export type ResolvedTheme = 'light' | 'dark'
 
 export interface ThemeContextValue {
-  theme: Theme
-  toggleTheme: () => void
+  theme: ThemePreference
+  resolvedTheme: ResolvedTheme
+  setTheme: (theme: ThemePreference) => void
 }
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null)

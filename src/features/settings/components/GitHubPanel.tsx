@@ -1,11 +1,11 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from '@/components/ui/Button'
 import { DEFAULT_BRANCH, useSync, type GitHubConfig } from '@/features/workspace'
 
 const FIELD_CLASS =
   'border-border-subtle bg-surface text-content focus:border-content-muted/50 w-full rounded-md border px-3 py-2 text-sm outline-none transition'
 
-export function SettingsPage() {
+export function GitHubPanel() {
   const { config, status, error, disconnect, connect, sync } = useSync()
 
   const [form, setForm] = useState<GitHubConfig>(
@@ -30,14 +30,14 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl px-4 py-10 sm:px-6 sm:py-16">
-      <h1 className="text-content text-2xl font-bold">GitHub sync</h1>
-      <p className="text-content-muted mt-2 text-sm">
+    <div>
+      <h2 className="text-content text-lg font-semibold">GitHub sync</h2>
+      <p className="text-content-muted mt-1 text-sm">
         Notes are stored as <code>.md</code> files in a repository you own, mirroring the folder
         structure in the sidebar.
       </p>
 
-      <form onSubmit={(event) => void handleSubmit(event)} className="mt-8 space-y-4">
+      <form onSubmit={(event) => void handleSubmit(event)} className="mt-6 space-y-4">
         <Field label="Personal access token" hint="Fine-grained token with Contents: Read and write.">
           <input
             type="password"
@@ -106,15 +106,7 @@ export function SettingsPage() {
   )
 }
 
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string
-  hint?: string
-  children: React.ReactNode
-}) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="block">
       <span className="text-content mb-1 block text-sm font-medium">{label}</span>

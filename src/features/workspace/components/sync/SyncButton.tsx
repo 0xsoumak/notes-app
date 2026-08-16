@@ -1,24 +1,34 @@
-import { Link } from 'react-router'
 import { CloudIcon, SpinnerIcon, WarningIcon } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
 import { formatRelativeTime } from '@/lib/format-date'
 import { useWorkspace } from '../../hooks/use-workspace'
 import { useSync } from '../../sync/sync-context'
 
+interface SyncButtonProps {
+  /**
+   * Settings now lives in a dialog rather than a route, and this component
+   * sits in the workspace feature, which the settings feature already
+   * depends on — so the caller supplies how to get there instead of this
+   * reaching back across the boundary.
+   */
+  onConnect: () => void
+}
+
 /** Sync trigger plus the state of the last run, shown at the foot of the sidebar. */
-export function SyncButton() {
+export function SyncButton({ onConnect }: SyncButtonProps) {
   const { isConfigured, status, error, lastSyncedAt, sync } = useSync()
   const { pendingCount } = useWorkspace()
 
   if (!isConfigured) {
     return (
-      <Link
-        to="/settings"
-        className="text-content-muted hover:bg-surface-hover hover:text-content flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition"
+      <button
+        type="button"
+        onClick={onConnect}
+        className="text-content-muted hover:bg-surface-hover hover:text-content flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition"
       >
         <CloudIcon className="size-4" />
         Connect GitHub
-      </Link>
+      </button>
     )
   }
 

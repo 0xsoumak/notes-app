@@ -1,4 +1,3 @@
-import { Link } from 'react-router'
 import { CloudIcon, SpinnerIcon, WarningIcon } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
 import { formatRelativeTime } from '@/lib/format-date'
@@ -24,7 +23,12 @@ const SHELL_CLASSES = cn(
  * Unsynced work is surfaced as a bubble counter rather than as text: the
  * number is the whole message at this size.
  */
-export function SyncFab() {
+interface SyncFabProps {
+  /** See [`SyncButton`]'s note on why this crosses in as a prop. */
+  onConnect: () => void
+}
+
+export function SyncFab({ onConnect }: SyncFabProps) {
   const { isConfigured, status, error, lastSyncedAt, sync } = useSync()
   const { pendingCount } = useWorkspace()
 
@@ -34,11 +38,17 @@ export function SyncFab() {
 
   if (!isConfigured) {
     return (
-      <Link to="/settings" aria-label="Connect GitHub" title="Connect GitHub" className={position}>
+      <button
+        type="button"
+        onClick={onConnect}
+        aria-label="Connect GitHub"
+        title="Connect GitHub"
+        className={cn(position, 'cursor-pointer')}
+      >
         <span className={SHELL_CLASSES}>
           <CloudIcon className="size-5" />
         </span>
-      </Link>
+      </button>
     )
   }
 

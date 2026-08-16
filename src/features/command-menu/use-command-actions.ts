@@ -1,16 +1,15 @@
 import { useMemo, type ComponentType } from 'react'
 import { useNavigate } from 'react-router'
-import { useTheme } from '@/app/providers/theme-context'
-import { HOME_ROUTE, SETTINGS_ROUTE, noteRoute } from '@/app/routes'
+import { HOME_ROUTE, noteRoute } from '@/app/routes'
 import {
   CloudIcon,
   HomeIcon,
-  MoonIcon,
   NewFolderIcon,
   NewNoteIcon,
+  PaletteIcon,
   SettingsIcon,
-  SunIcon,
 } from '@/components/ui/icons'
+import { useSettingsDialog } from '@/features/settings'
 import { useSync, useWorkspace } from '@/features/workspace'
 
 /** Only the props the menu actually passes; keeps icons swappable. */
@@ -38,7 +37,7 @@ export function useCommandActions(): CommandAction[] {
   const navigate = useNavigate()
   const { createNote, createFolder, pendingCount } = useWorkspace()
   const { isConfigured, status, sync } = useSync()
-  const { theme, toggleTheme } = useTheme()
+  const settingsDialog = useSettingsDialog()
 
   return useMemo(() => {
     const actions: CommandAction[] = [
@@ -68,54 +67,44 @@ export function useCommandActions(): CommandAction[] {
       },
     ]
 
-    actions.push(
-      isConfigured
-        ? {
-            id: 'sync',
-            title: 'Sync now',
-            keywords: 'github push pull commit',
-            hint: pendingCount > 0 ? `${pendingCount} pending` : undefined,
-            icon: CloudIcon,
-            // Firing a second sync mid-run would race the first; the sidebar
-            // and the floating button disable themselves for the same reason.
-            run: () => (status === 'syncing' ? undefined : sync()),
-          }
-        : {
-            id: 'connect',
-            title: 'Connect GitHub',
-            keywords: 'sync setup repository token',
-            icon: CloudIcon,
-            run: () => void navigate(SETTINGS_ROUTE),
-          },
-    )
+    if (isConfigured) {
+      actions.push({
+        id: 'sync',
+        title: 'Sync now',
+        keywords: 'github push pull commit',
+        hint: pendingCount > 0 ? `${pendingCount} pending` : undefined,
+        icon: CloudIcon,
+        // Firing a second sync mid-run would race the first; the sidebar
+        // and the floating button disable themselves for the same reason.
+        run: () => (status === 'syncing' ? undefined : sync()),
+      })
+    } else {
+      actions.push({
+        id: 'connect',
+        title: 'Connect GitHub',
+        keywords: 'sync setup repository token settings',
+        icon: CloudIcon,
+        run: () => settingsDialog.open('github'),
+      })
+    }
 
     actions.push(
       {
-        id: 'theme',
-        title: `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`,
-        keywords: 'dark light appearance toggle',
-        icon: theme === 'dark' ? SunIcon : MoonIcon,
-        run: toggleTheme,
+        id: 'appearance',
+        title: 'Change appearance',
+        keywords: 'theme dark light system settings preferences',
+        icon: PaletteIcon,
+        run: () => settingsDialog.open('appearance'),
       },
       {
         id: 'settings',
         title: 'Open settings',
-        keywords: 'preferences github repository',
+        keywords: 'preferences github repository appearance theme',
         icon: SettingsIcon,
-        run: () => void navigate(SETTINGS_ROUTE),
+        run: () => settingsDialog.open(),
       },
     )
 
     return actions
-  }, [
-    createFolder,
-    createNote,
-    isConfigured,
-    navigate,
-    pendingCount,
-    status,
-    sync,
-    theme,
-    toggleTheme,
-  ])
+  }, [createFolder, createNote, isConfigured, navigate, pendingCount, settingsDialog, status, sync])
 }
