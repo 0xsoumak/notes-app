@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import { useDebouncedCallback } from '@/lib/hooks/use-debounced-callback'
-import type { NotePatch } from '../types'
-import { useNotes } from './use-notes'
+import { isNote, type ItemPatch } from '../types'
+import { useWorkspace } from './use-workspace'
 
 /** How long editing pauses before a note is persisted. */
 const SAVE_DEBOUNCE_MS = 600
@@ -13,12 +13,13 @@ const SAVE_DEBOUNCE_MS = 600
  * on the note it was typed into — even if the user navigates away first.
  */
 export function useNote(noteId: string | undefined) {
-  const { notes, status, updateNote } = useNotes()
+  const { items, status, updateItem } = useWorkspace()
 
-  const note = noteId ? (notes.find((candidate) => candidate.id === noteId) ?? null) : null
+  const item = noteId ? items.find((candidate) => candidate.id === noteId) : undefined
+  const note = item && isNote(item) ? item : null
 
   const { run, flush } = useDebouncedCallback(
-    (id: string, patch: NotePatch) => void updateNote(id, patch),
+    (id: string, patch: ItemPatch) => void updateItem(id, patch),
     SAVE_DEBOUNCE_MS,
   )
 
@@ -26,7 +27,7 @@ export function useNote(noteId: string | undefined) {
   useEffect(() => flush, [noteId, flush])
 
   const saveNote = useCallback(
-    (patch: NotePatch) => {
+    (patch: ItemPatch) => {
       if (noteId) run(noteId, patch)
     },
     [noteId, run],

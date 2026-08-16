@@ -1,5 +1,5 @@
 import { useTheme } from '@/app/providers/theme-context'
-import { Button } from './Button'
+import { IconButton } from './IconButton'
 import { MoonIcon, SunIcon } from './icons'
 
 export function ThemeToggle() {
@@ -7,14 +7,8 @@ export function ThemeToggle() {
   const nextTheme = theme === 'dark' ? 'light' : 'dark'
 
   return (
-    <Button
-      size="sm"
-      onClick={toggleTheme}
-      aria-label={`Switch to ${nextTheme} theme`}
-      title={`Switch to ${nextTheme} theme`}
-      className="w-7 px-0"
-    >
-      {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-    </Button>
+    <IconButton label={`Switch to ${nextTheme} theme`} onClick={toggleTheme}>
+      {theme === 'dark' ? <SunIcon className="size-4" /> : <MoonIcon className="size-4" />}
+    </IconButton>
   )
 }

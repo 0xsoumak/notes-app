@@ -13,13 +13,7 @@ interface NoteTitleProps {
  * Uncontrolled title field: the parent remounts this per note, so `defaultValue`
  * stays in sync without fighting the debounced save round-trip.
  */
-export function NoteTitle({
-  title,
-  icon,
-  onTitleChange,
-  onIconChange,
-  onCommit,
-}: NoteTitleProps) {
+export function NoteTitle({ title, icon, onTitleChange, onIconChange, onCommit }: NoteTitleProps) {
   return (
     <header className="mb-2">
       <NoteIconPicker icon={icon} onChange={onIconChange} />

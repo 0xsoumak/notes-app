@@ -1,7 +1,7 @@
 import { useParams } from 'react-router'
 import { EmptyState } from '@/components/layout/EmptyState'
 import { FileIcon } from '@/components/ui/icons'
-import { NoteEditor, useNote } from '@/features/notes'
+import { NoteEditor, useNote } from '@/features/workspace'
 
 export function NotePage() {
   const { noteId } = useParams<{ noteId: string }>()

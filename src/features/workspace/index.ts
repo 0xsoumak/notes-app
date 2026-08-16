@@ -1,0 +1,10 @@
+/** Public surface of the workspace feature — import from here, not from subpaths. */
+export { NoteEditor } from './components/editor/NoteEditor'
+export { TreeSearchResults } from './components/tree/TreeSearchResults'
+export { TreeView } from './components/tree/TreeView'
+export { useExpandedIds } from './hooks/use-expanded-ids'
+export { useNote } from './hooks/use-note'
+export { useWorkspace } from './hooks/use-workspace'
+export { WorkspaceProvider } from './store/WorkspaceProvider'
+export { isFolder, isNote } from './types'
+export type { FolderItem, ItemPatch, NoteContent, NoteItem, WorkspaceItem } from './types'

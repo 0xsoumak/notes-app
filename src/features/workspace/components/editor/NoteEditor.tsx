@@ -1,12 +1,13 @@
 import { BlockNoteView } from '@blocknote/mantine'
 import { useCreateBlockNote } from '@blocknote/react'
 import { useTheme } from '@/app/providers/theme-context'
-import type { Note, NotePatch } from '../types'
+import { formatRelativeTime } from '@/lib/format-date'
+import type { ItemPatch, NoteItem } from '../../types'
 import { NoteTitle } from './NoteTitle'
 
 interface NoteEditorProps {
-  note: Note
-  onChange: (patch: NotePatch) => void
+  note: NoteItem
+  onChange: (patch: ItemPatch) => void
 }
 
 /**
@@ -32,6 +33,10 @@ export function NoteEditor({ note, onChange }: NoteEditorProps) {
         onIconChange={(icon) => onChange({ icon })}
         onCommit={() => editor.focus()}
       />
+
+      <p className="text-content-muted mb-6 text-xs">
+        Edited {formatRelativeTime(note.updatedAt)}
+      </p>
 
       <BlockNoteView
         editor={editor}

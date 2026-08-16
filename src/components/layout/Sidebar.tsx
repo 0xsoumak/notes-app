@@ -1,35 +1,44 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router'
-import { Button } from '@/components/ui/Button'
+import { useNavigate, useParams } from 'react-router'
+import { IconButton } from '@/components/ui/IconButton'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { PlusIcon, SearchIcon } from '@/components/ui/icons'
-import { NoteList, useNotes } from '@/features/notes'
+import { NewFolderIcon, NewNoteIcon, SearchIcon } from '@/components/ui/icons'
+import {
+  TreeSearchResults,
+  TreeView,
+  useExpandedIds,
+  useWorkspace,
+} from '@/features/workspace'
 
 export function Sidebar() {
-  const { notes, status, createNote, deleteNote } = useNotes()
-  const [query, setQuery] = useState('')
+  const { items, status, createNote, createFolder } = useWorkspace()
+  const { expandedIds, toggle, expand } = useExpandedIds()
+  const { noteId } = useParams<{ noteId: string }>()
   const navigate = useNavigate()
 
-  const visibleNotes = useMemo(() => {
-    const needle = query.trim().toLowerCase()
-    if (!needle) return notes
-    return notes.filter((note) => note.title.toLowerCase().includes(needle))
-  }, [notes, query])
+  const [query, setQuery] = useState('')
+  const trimmedQuery = query.trim().toLowerCase()
 
-  const handleCreate = async () => {
-    const note = await createNote()
+  const matches = useMemo(() => {
+    if (!trimmedQuery) return []
+    return items.filter((item) => item.title.toLowerCase().includes(trimmedQuery))
+  }, [items, trimmedQuery])
+
+  const handleCreateNote = async () => {
+    const note = await createNote(null)
     void navigate(`/notes/${note.id}`)
-  }
-
-  const handleDelete = async (id: string) => {
-    await deleteNote(id)
-    void navigate('/')
   }
 
   return (
     <aside className="bg-surface-muted border-border-subtle flex h-full w-64 shrink-0 flex-col border-r">
-      <div className="flex items-center justify-between gap-2 px-3 py-3">
-        <span className="text-content text-sm font-semibold">Notes</span>
+      <div className="flex items-center gap-1 px-3 py-3">
+        <span className="text-content flex-1 text-sm font-semibold">Notes</span>
+        <IconButton label="New note" onClick={() => void handleCreateNote()}>
+          <NewNoteIcon className="size-4" />
+        </IconButton>
+        <IconButton label="New folder" onClick={() => void createFolder(null)}>
+          <NewFolderIcon className="size-4" />
+        </IconButton>
         <ThemeToggle />
       </div>
 
@@ -39,28 +48,28 @@ export function Sidebar() {
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search notes"
-            aria-label="Search notes"
+            placeholder="Search"
+            aria-label="Search notes and folders"
             className="placeholder:text-content-muted/70 w-full bg-transparent text-xs outline-none"
           />
         </div>
       </div>
 
-      <div className="px-3 pb-2">
-        <Button size="sm" onClick={() => void handleCreate()} className="w-full justify-start">
-          <PlusIcon className="size-3.5" />
-          New note
-        </Button>
-      </div>
-
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
         {status === 'loading' ? (
           <p className="text-content-muted px-2 py-6 text-center text-xs">Loading…</p>
+        ) : trimmedQuery ? (
+          <TreeSearchResults matches={matches} />
+        ) : items.length === 0 ? (
+          <p className="text-content-muted px-2 py-6 text-center text-xs">
+            Nothing here yet. Create a note or folder above.
+          </p>
         ) : (
-          <NoteList
-            notes={visibleNotes}
-            onDelete={(id) => void handleDelete(id)}
-            emptyMessage={query ? 'No notes match your search.' : 'No notes yet.'}
+          <TreeView
+            activeNoteId={noteId}
+            expandedIds={expandedIds}
+            onToggle={toggle}
+            onExpand={expand}
           />
         )}
       </nav>
