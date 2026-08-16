@@ -13,10 +13,12 @@ const WEEK = 7 * DAY
 /**
  * "just now" / "3 hours ago" / "Mar 4, 2026" — falls back to an absolute date
  * once the timestamp is more than a week old.
+ *
+ * Accepts an ISO string or an epoch milliseconds value.
  */
-export function formatRelativeTime(isoDate: string): string {
-  const timestamp = new Date(isoDate).getTime()
-  if (Number.isNaN(timestamp)) return ''
+export function formatRelativeTime(date: string | number): string {
+  const timestamp = typeof date === 'number' ? date : new Date(date).getTime()
+  if (!timestamp || Number.isNaN(timestamp)) return 'never'
 
   const elapsed = Date.now() - timestamp
   if (elapsed < MINUTE) return 'just now'

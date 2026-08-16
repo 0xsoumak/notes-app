@@ -1,8 +1,10 @@
+import { useRef } from 'react'
 import { NoteIconPicker } from './NoteIconPicker'
 
 interface NoteTitleProps {
   title: string
   icon: string
+  /** Fires on blur or Enter only — the title is the file name, so every change is a rename. */
   onTitleChange: (title: string) => void
   onIconChange: (icon: string) => void
   /** Fired when the user presses Enter, so the caller can focus the body. */
@@ -11,19 +13,29 @@ interface NoteTitleProps {
 
 /**
  * Uncontrolled title field: the parent remounts this per note, so `defaultValue`
- * stays in sync without fighting the debounced save round-trip.
+ * stays in sync without fighting the save round-trip.
  */
 export function NoteTitle({ title, icon, onTitleChange, onIconChange, onCommit }: NoteTitleProps) {
+  const committedRef = useRef(title)
+
+  const commit = (value: string) => {
+    const trimmed = value.trim()
+    if (!trimmed || trimmed === committedRef.current) return
+    committedRef.current = trimmed
+    onTitleChange(trimmed)
+  }
+
   return (
     <header className="mb-2">
       <NoteIconPicker icon={icon} onChange={onIconChange} />
 
       <textarea
         defaultValue={title}
-        onChange={(event) => onTitleChange(event.target.value)}
+        onBlur={(event) => commit(event.target.value)}
         onKeyDown={(event) => {
           if (event.key !== 'Enter') return
           event.preventDefault()
+          commit(event.currentTarget.value)
           onCommit()
         }}
         rows={1}

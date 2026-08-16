@@ -1,91 +1,59 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, type ReactNode } from 'react'
-import { workspaceRepository } from '../api'
+import { useCallback, useMemo, type ReactNode } from 'react'
+import { useLiveQuery } from 'dexie-react-hooks'
+import { buildItems } from '../data/build-items'
+import { db } from '../data/db'
+import { parseNotesIndex } from '../data/notes-index'
+import * as store from '../data/workspace-store'
+import { INDEX_FILE } from '../paths'
 import type { DropTarget } from '../tree/drop-projection'
 import { moveItem as computeMoves } from '../tree/move-item'
-import type { ItemPatch, WorkspaceItem } from '../types'
 import { WorkspaceContext, type WorkspaceContextValue } from './workspace-context'
-import {
-  initialWorkspaceState,
-  workspaceReducer,
-} from './workspace-reducer'
 
 interface WorkspaceProviderProps {
   children: ReactNode
 }
 
 export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
-  const [state, dispatch] = useReducer(workspaceReducer, initialWorkspaceState)
+  // Dexie pushes a new array whenever the table changes, so every mutation
+  // below is write-only — there is no local state to keep in step.
+  const files = useLiveQuery(() => db.files.toArray(), [])
 
-  // `moveItem` needs the current tree without re-creating its callback on every
-  // edit, which would restart the drag session mid-gesture.
-  const itemsRef = useRef<WorkspaceItem[]>(state.items)
-  itemsRef.current = state.items
+  const items = useMemo(() => {
+    if (!files) return []
+    const indexRow = files.find((file) => file.path === INDEX_FILE)
+    return buildItems(files, indexRow ? parseNotesIndex(indexRow.content) : {})
+  }, [files])
 
-  useEffect(() => {
-    let cancelled = false
+  const pendingCount = useMemo(
+    () => (files ?? []).filter((file) => file.isDirty === 1).length,
+    [files],
+  )
 
-    workspaceRepository
-      .list()
-      .then((items) => {
-        if (!cancelled) dispatch({ type: 'loaded', items })
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) dispatch({ type: 'failed', error: toMessage(error) })
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const createNote = useCallback(async (parentId: string | null = null) => {
-    const note = await workspaceRepository.createNote(parentId)
-    dispatch({ type: 'upserted', item: note })
-    return note
-  }, [])
-
-  const createFolder = useCallback(async (parentId: string | null = null) => {
-    const folder = await workspaceRepository.createFolder(parentId)
-    dispatch({ type: 'upserted', item: folder })
-    return folder
-  }, [])
-
-  const updateItem = useCallback(async (id: string, patch: ItemPatch) => {
-    const item = await workspaceRepository.update(id, patch)
-    dispatch({ type: 'upserted', item })
-  }, [])
-
-  const deleteItem = useCallback(async (id: string) => {
-    const removedIds = await workspaceRepository.remove(id)
-    dispatch({ type: 'removed', ids: removedIds })
-    return removedIds
-  }, [])
-
-  const moveItem = useCallback(async (activeId: string, target: DropTarget) => {
-    const positions = computeMoves(itemsRef.current, activeId, target)
-    if (positions.length === 0) return
-
-    const items = await workspaceRepository.move(positions)
-    dispatch({ type: 'moved', items })
-  }, [])
+  const moveItem = useCallback(
+    async (activeId: string, target: DropTarget) => {
+      const positions = computeMoves(items, activeId, target)
+      if (positions.length === 0) return activeId
+      return store.applyPositions(activeId, positions)
+    },
+    [items],
+  )
 
   const value = useMemo<WorkspaceContextValue>(
     () => ({
-      items: state.items,
-      status: state.status,
-      error: state.error,
-      createNote,
-      createFolder,
-      updateItem,
-      deleteItem,
+      items,
+      isLoading: files === undefined,
+      pendingCount,
+      createNote: (parentId = null) => store.createNote(parentId),
+      createFolder: async (parentId = null) => {
+        await store.createFolder(parentId)
+      },
+      renameItem: store.renameItem,
+      setItemIcon: store.setItemIcon,
+      deleteItem: store.deleteItem,
       moveItem,
     }),
-    [state, createNote, createFolder, updateItem, deleteItem, moveItem],
+    [items, files, pendingCount, moveItem],
   )
 
   return <WorkspaceContext value={value}>{children}</WorkspaceContext>
-}
-
-function toMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Something went wrong loading your workspace.'
 }

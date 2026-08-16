@@ -1,9 +1,11 @@
 # Notes
 
 A Notion-style notes app: a nested folder tree in the sidebar, drag-and-drop
-reordering, and a BlockNote rich-text editor.
+reordering, and a BlockNote rich-text editor. Notes are stored as `.md` files
+in a GitHub repository you own, mirroring the sidebar's folder structure.
 
-React 19 · TypeScript · Vite · Tailwind v4 · BlockNote · dnd-kit · Phosphor icons
+React 19 · TypeScript · Vite · Tailwind v4 · BlockNote · dnd-kit · Dexie ·
+Phosphor icons
 
 ```bash
 pnpm dev      # dev server
@@ -25,13 +27,17 @@ src/
 │   └── ui/                 # Button, IconButton, ThemeToggle, icons
 ├── features/
 │   └── workspace/          # the one domain feature
-│       ├── api/            # repository interface + localStorage impl
-│       ├── store/          # reducer, context, provider
+│       ├── paths.ts        # the path model — an item's identity
+│       ├── data/           # Dexie schema, local mutations, tree derivation
+│       ├── github/         # REST client, credentials, base64
+│       ├── sync/           # pull/push engine + provider
+│       ├── store/          # context + provider over Dexie live queries
 │       ├── hooks/          # useWorkspace, useNote, useExpandedIds
 │       ├── tree/           # pure tree logic (flatten, projection, move)
 │       ├── components/
 │       │   ├── tree/       # sidebar tree + drag and drop
-│       │   └── editor/     # BlockNote editor
+│       │   ├── editor/     # BlockNote editor
+│       │   └── sync/       # sync button and status
 │       └── index.ts        # public surface — import from here
 ├── lib/                    # cn, id, format-date, shared hooks
 ├── pages/                  # HomePage, NotePage
@@ -43,24 +49,47 @@ Imports use the `@/` alias for `src/` (declared in both `vite.config.ts` and
 
 ### The workspace model
 
-Folders and notes are the same kind of record, discriminated by `kind`:
+An item's **id is its repo path** — `personal/notes/thoughts/today.md` for a
+note, `personal/notes/thoughts` for a folder. Folders are never stored: they
+are inferred from the path segments of the files beneath them, exactly as Git
+models them. An empty folder therefore needs a `.gitkeep` to exist at all.
 
-```ts
-type WorkspaceItem = FolderItem | NoteItem
+Two things Git cannot represent are kept in a sidecar `.notes-index.json` at
+the repo root: **sibling order** and **per-note icons**. Anything missing from
+it falls back to folders-first, then alphabetical.
+
+Renaming a note renames its file. Moving it between folders moves the file.
+Both change the id, so the URL follows along.
+
+### Local-first sync
+
+```
+BlockNote  ──►  Dexie (IndexedDB)  ──[ Sync ]──►  GitHub REST API
 ```
 
-Both carry `parentId` and `order`, which is the whole tree structure. Only
-folders may have children, and nesting is unlimited in depth.
+Edits land in IndexedDB immediately and are never blocked on the network.
+Pressing **Sync** runs `features/workspace/sync/sync-engine.ts`:
 
-### Swapping in the backend
+1. **Pull** — one recursive Trees call, compare SHAs, fetch changed blobs.
+2. **Push** — deletes, then moves, then content writes.
 
-Everything above `features/workspace/api/` is storage-agnostic. The UI talks to
-the `WorkspaceRepository` interface, whose methods are already async even though
-today's implementation is synchronous localStorage.
+Each row records a `remotePath` alongside its local `path`. When they diverge,
+the file was moved locally, and the push turns that into a **real Git move**
+via the Git Data API — one commit for the whole batch, so renaming a folder of
+fifty notes is one commit rather than a hundred API calls.
 
-To connect a real backend, write `createHttpWorkspaceRepository()` against the
-same interface and change the one line in `features/workspace/api/index.ts`. No
-component or hook needs to change.
+Conflict policy is **local-wins**: a file with unpushed edits is never
+overwritten by a pull, and its push retries against the current remote SHA.
+That suits a single-author notebook; editing the same note on two devices
+between syncs would need real merging.
+
+### Credentials
+
+The token, owner, repo, and branch live in `localStorage` and are read only
+through `features/workspace/github/github-config.ts`. Nothing is read from
+`.env` — a client-side bundle cannot hold a secret, so a `VITE_`-prefixed
+token would be compiled into `dist/` for anyone to read. Moving to GitHub
+OAuth later means changing that one module.
 
 ### Drag and drop
 
@@ -80,10 +109,16 @@ Covered by `tree/tree.test.ts`.
 
 ## Editor notes
 
-BlockNote seeds its document once when the editor is created, so `NoteEditor` is
-remounted per note via `key={note.id}`. Edits are debounced (600 ms) before they
-reach the repository, and a pending save carries its note id so navigating away
-mid-edit still writes to the right note.
+Notes are stored as plain markdown, so the editor parses markdown in on mount
+and serialises back out on change. **BlockNote's markdown export is lossy** —
+some blocks and inline styles do not survive a round-trip. That is the accepted
+trade for readable `.md` files you can edit on GitHub directly.
+
+`NoteEditor` is remounted per note via `key={note.id}` so hydration runs against
+the right document. Edits are debounced (600 ms) before reaching IndexedDB, and
+a pending save carries its note path so navigating away mid-edit still writes to
+the right note. Title edits commit on blur or Enter, never per keystroke —
+each one renames a file.
 
 Stylesheet order is load-bearing and is set by the import order in `main.tsx`:
 Tailwind preflight first, then BlockNote's stylesheets, then our overrides.

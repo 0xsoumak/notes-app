@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { BrowserRouter } from 'react-router'
-import { WorkspaceProvider } from '@/features/workspace'
+import { SyncProvider, WorkspaceProvider } from '@/features/workspace'
 import { ThemeProvider } from './ThemeProvider'
 
 interface AppProvidersProps {
@@ -12,7 +12,9 @@ export function AppProviders({ children }: AppProvidersProps) {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <WorkspaceProvider>{children}</WorkspaceProvider>
+        <WorkspaceProvider>
+          <SyncProvider>{children}</SyncProvider>
+        </WorkspaceProvider>
       </ThemeProvider>
     </BrowserRouter>
   )

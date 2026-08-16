@@ -14,7 +14,9 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useNavigate } from 'react-router'
+import { noteRoute } from '@/app/routes'
 import { useWorkspace } from '../../hooks/use-workspace'
+import { isNotePath } from '../../paths'
 import { getProjection, type DropTarget } from '../../tree/drop-projection'
 import { flattenTree } from '../../tree/flatten-tree'
 import { TreeRow, type TreeRowActions } from './TreeRow'
@@ -31,7 +33,7 @@ interface TreeViewProps {
 }
 
 export function TreeView({ activeNoteId, expandedIds, onToggle, onExpand }: TreeViewProps) {
-  const { items, createNote, createFolder, updateItem, deleteItem, moveItem } = useWorkspace()
+  const { items, createNote, createFolder, renameItem, deleteItem, moveItem } = useWorkspace()
   const navigate = useNavigate()
 
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -58,35 +60,39 @@ export function TreeView({ activeNoteId, expandedIds, onToggle, onExpand }: Tree
     setOffsetX(0)
   }
 
-  const handleDragStart = ({ active }: DragStartEvent) => {
-    setDraggingId(String(active.id))
-    setOverId(String(active.id))
-  }
-
-  const handleDragMove = ({ delta }: DragMoveEvent) => setOffsetX(delta.x)
-
-  const handleDragOver = ({ over }: DragOverEvent) => setOverId(over ? String(over.id) : null)
-
   const handleDragEnd = ({ active }: DragEndEvent) => {
-    if (projection) {
-      void moveItem(String(active.id), projection).then(() => {
-        // Reveal the destination so the moved row doesn't vanish into a
-        // collapsed folder.
-        if (projection.parentId) onExpand([projection.parentId])
-      })
-    }
+    const activeId = String(active.id)
+    const target = projection
     resetDrag()
+    if (!target) return
+
+    void moveItem(activeId, target).then((nextPath) => {
+      // Reveal the destination so the moved row doesn't vanish into a
+      // collapsed folder.
+      if (target.parentId) onExpand([target.parentId])
+      // Moving changes the path, and the path is the URL.
+      if (nextPath !== activeId && activeId === activeNoteId && isNotePath(nextPath)) {
+        void navigate(noteRoute(nextPath), { replace: true })
+      }
+    })
   }
 
   const handleDelete = async (id: string) => {
-    const removedIds = await deleteItem(id)
-    if (activeNoteId && removedIds.includes(activeNoteId)) void navigate('/')
+    const removed = await deleteItem(id)
+    if (activeNoteId && removed.includes(activeNoteId)) void navigate('/')
+  }
+
+  const handleRename = async (id: string, title: string) => {
+    const nextPath = await renameItem(id, title)
+    if (nextPath !== id && id === activeNoteId && isNotePath(nextPath)) {
+      void navigate(noteRoute(nextPath), { replace: true })
+    }
   }
 
   const handleCreateNote = async (parentId: string) => {
-    const note = await createNote(parentId)
+    const path = await createNote(parentId)
     onExpand([parentId])
-    void navigate(`/notes/${note.id}`)
+    void navigate(noteRoute(path))
   }
 
   const handleCreateFolder = async (parentId: string) => {
@@ -96,7 +102,7 @@ export function TreeView({ activeNoteId, expandedIds, onToggle, onExpand }: Tree
 
   const actions: TreeRowActions = {
     onToggle,
-    onRename: (id, title) => void updateItem(id, { title }),
+    onRename: (id, title) => void handleRename(id, title),
     onDelete: (id) => void handleDelete(id),
     onCreateNote: (parentId) => void handleCreateNote(parentId),
     onCreateFolder: (parentId) => void handleCreateFolder(parentId),
@@ -110,9 +116,12 @@ export function TreeView({ activeNoteId, expandedIds, onToggle, onExpand }: Tree
       collisionDetection={closestCenter}
       // Always re-measure: rows appear and disappear as folders collapse.
       measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
-      onDragStart={handleDragStart}
-      onDragMove={handleDragMove}
-      onDragOver={handleDragOver}
+      onDragStart={({ active }: DragStartEvent) => {
+        setDraggingId(String(active.id))
+        setOverId(String(active.id))
+      }}
+      onDragMove={({ delta }: DragMoveEvent) => setOffsetX(delta.x)}
+      onDragOver={({ over }: DragOverEvent) => setOverId(over ? String(over.id) : null)}
       onDragEnd={handleDragEnd}
       onDragCancel={resetDrag}
     >

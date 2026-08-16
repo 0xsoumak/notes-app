@@ -1,19 +1,22 @@
 import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { Link, useNavigate } from 'react-router'
+import { noteRoute } from '@/app/routes'
 import { IconButton } from '@/components/ui/IconButton'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { NewFolderIcon, NewNoteIcon, SearchIcon } from '@/components/ui/icons'
+import { NewFolderIcon, NewNoteIcon, SearchIcon, SettingsIcon } from '@/components/ui/icons'
 import {
+  SyncButton,
   TreeSearchResults,
   TreeView,
   useExpandedIds,
+  useNotePath,
   useWorkspace,
 } from '@/features/workspace'
 
 export function Sidebar() {
-  const { items, status, createNote, createFolder } = useWorkspace()
+  const { items, isLoading, createNote, createFolder } = useWorkspace()
   const { expandedIds, toggle, expand } = useExpandedIds()
-  const { noteId } = useParams<{ noteId: string }>()
+  const activeNoteId = useNotePath()
   const navigate = useNavigate()
 
   const [query, setQuery] = useState('')
@@ -25,8 +28,8 @@ export function Sidebar() {
   }, [items, trimmedQuery])
 
   const handleCreateNote = async () => {
-    const note = await createNote(null)
-    void navigate(`/notes/${note.id}`)
+    const path = await createNote(null)
+    void navigate(noteRoute(path))
   }
 
   return (
@@ -56,7 +59,7 @@ export function Sidebar() {
       </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
-        {status === 'loading' ? (
+        {isLoading ? (
           <p className="text-content-muted px-2 py-6 text-center text-xs">Loading…</p>
         ) : trimmedQuery ? (
           <TreeSearchResults matches={matches} />
@@ -66,13 +69,24 @@ export function Sidebar() {
           </p>
         ) : (
           <TreeView
-            activeNoteId={noteId}
+            activeNoteId={activeNoteId}
             expandedIds={expandedIds}
             onToggle={toggle}
             onExpand={expand}
           />
         )}
       </nav>
+
+      <div className="border-border-subtle space-y-1 border-t px-2 py-2">
+        <SyncButton />
+        <Link
+          to="/settings"
+          className="text-content-muted hover:bg-surface-hover hover:text-content flex items-center gap-2 rounded-md px-2 py-1.5 text-xs transition"
+        >
+          <SettingsIcon className="size-4" />
+          Settings
+        </Link>
+      </div>
     </aside>
   )
 }

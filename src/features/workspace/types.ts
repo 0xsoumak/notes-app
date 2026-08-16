@@ -1,39 +1,43 @@
-import type { Block } from '@blocknote/core'
-
-/** A note's body is BlockNote's document model — an array of blocks. */
-export type NoteContent = Block[]
-
+/**
+ * An item's `id` is its repo-relative path — `personal/notes/thoughts/today.md`
+ * for a note, `personal/notes/thoughts` for a folder. Folders are implied by
+ * paths rather than stored, exactly as Git models them.
+ */
 interface WorkspaceItemBase {
   id: string
-  /** `null` means the item sits at the root of the tree. */
+  /** Parent folder path, or `null` at the repo root. */
   parentId: string | null
-  /** Position among siblings, contiguous from 0. */
+  /** Position among siblings, contiguous from 0. Sourced from the sidecar index. */
   order: number
+  /** Display name — the file name without its `.md` extension. */
   title: string
   icon: string
-  createdAt: string
-  updatedAt: string
+  updatedAt: number
 }
 
-/** A container. Only folders may have children. */
+/** A directory. Only folders may have children. */
 export interface FolderItem extends WorkspaceItemBase {
   kind: 'folder'
 }
 
-/** A leaf holding editable content. */
+/** A `.md` file. Its markdown body is stored separately, keyed by path. */
 export interface NoteItem extends WorkspaceItemBase {
   kind: 'note'
-  content: NoteContent
+  /** Remote blob SHA, or `null` if this note has never been pushed. */
+  sha: string | null
+  /** True when local edits are waiting to be pushed. */
+  isDirty: boolean
 }
 
 export type WorkspaceItem = FolderItem | NoteItem
 
-/** The fields a user edits directly. Position and timestamps are not among them. */
-export interface ItemPatch {
-  title?: string
-  icon?: string
-  content?: NoteContent
+/** Per-path metadata Git cannot represent, kept in the sidecar index file. */
+export interface ItemMeta {
+  order: number
+  icon: string
 }
+
+export type NotesIndex = Record<string, ItemMeta>
 
 /** Where an item sits in the tree — the unit of a drag-and-drop move. */
 export interface ItemPosition {

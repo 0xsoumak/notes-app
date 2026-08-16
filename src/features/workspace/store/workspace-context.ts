@@ -1,19 +1,20 @@
 import { createContext, use } from 'react'
 import type { DropTarget } from '../tree/drop-projection'
-import type { FolderItem, ItemPatch, NoteItem, WorkspaceItem } from '../types'
-import type { WorkspaceStatus } from './workspace-reducer'
+import type { WorkspaceItem } from '../types'
 
 export interface WorkspaceContextValue {
   items: WorkspaceItem[]
-  status: WorkspaceStatus
-  error: string | null
-  createNote: (parentId?: string | null) => Promise<NoteItem>
-  createFolder: (parentId?: string | null) => Promise<FolderItem>
-  updateItem: (id: string, patch: ItemPatch) => Promise<void>
-  /** Removes the item and its whole subtree. Resolves to the removed ids. */
+  isLoading: boolean
+  /** Number of files with unpushed changes. */
+  pendingCount: number
+  createNote: (parentId?: string | null) => Promise<string>
+  createFolder: (parentId?: string | null) => Promise<void>
+  /** Renaming moves the file, so this resolves to the item's new path. */
+  renameItem: (id: string, title: string) => Promise<string>
+  setItemIcon: (id: string, icon: string) => Promise<void>
   deleteItem: (id: string) => Promise<string[]>
-  /** Applies a drag-and-drop result to the tree. */
-  moveItem: (activeId: string, target: DropTarget) => Promise<void>
+  /** Applies a drag-and-drop result. Resolves to the dragged item's new path. */
+  moveItem: (activeId: string, target: DropTarget) => Promise<string>
 }
 
 export const WorkspaceContext = createContext<WorkspaceContextValue | null>(null)

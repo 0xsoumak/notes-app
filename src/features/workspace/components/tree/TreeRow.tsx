@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useNavigate } from 'react-router'
+import { noteRoute } from '@/app/routes'
 import { IconButton } from '@/components/ui/IconButton'
 import {
   CaretRightIcon,
@@ -54,7 +55,7 @@ export function TreeRow({
       onToggle(node.id)
       return
     }
-    void navigate(`/notes/${node.id}`)
+    void navigate(noteRoute(node.id))
   }
 
   return (

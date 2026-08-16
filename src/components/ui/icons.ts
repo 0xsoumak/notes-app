@@ -6,6 +6,10 @@
  */
 export {
   CaretRight as CaretRightIcon,
+  CloudArrowUp as CloudIcon,
+  CircleNotch as SpinnerIcon,
+  GearSix as SettingsIcon,
+  Warning as WarningIcon,
   DotsSixVertical as DragHandleIcon,
   File as FileIcon,
   FilePlus as NewNoteIcon,

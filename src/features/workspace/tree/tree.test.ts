@@ -6,16 +6,7 @@ import { flattenTree, getChildren, getDescendantIds } from './flatten-tree'
 import { moveItem } from './move-item'
 
 function folder(id: string, parentId: string | null, order: number): FolderItem {
-  return {
-    id,
-    kind: 'folder',
-    parentId,
-    order,
-    title: id,
-    icon: '📁',
-    createdAt: '',
-    updatedAt: '',
-  }
+  return { id, kind: 'folder', parentId, order, title: id, icon: '📁', updatedAt: 0 }
 }
 
 function note(id: string, parentId: string | null, order: number): NoteItem {
@@ -26,9 +17,9 @@ function note(id: string, parentId: string | null, order: number): NoteItem {
     order,
     title: id,
     icon: '📄',
-    content: [],
-    createdAt: '',
-    updatedAt: '',
+    updatedAt: 0,
+    sha: null,
+    isDirty: false,
   }
 }
 

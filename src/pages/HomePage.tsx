@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router'
+import { noteRoute } from '@/app/routes'
 import { EmptyState } from '@/components/layout/EmptyState'
 import { Button } from '@/components/ui/Button'
 import { FileIcon, PlusIcon } from '@/components/ui/icons'
@@ -9,8 +10,8 @@ export function HomePage() {
   const navigate = useNavigate()
 
   const handleCreate = async () => {
-    const note = await createNote(null)
-    void navigate(`/notes/${note.id}`)
+    const path = await createNote(null)
+    void navigate(noteRoute(path))
   }
 
   return (

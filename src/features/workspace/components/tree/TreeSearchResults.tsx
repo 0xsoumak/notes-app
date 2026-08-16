@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router'
+import { noteRoute } from '@/app/routes'
 import { FolderIcon } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
 import { isFolder, type WorkspaceItem } from '../../types'
@@ -30,7 +31,7 @@ export function TreeSearchResults({ matches }: TreeSearchResultsProps) {
         ) : (
           <li key={item.id}>
             <NavLink
-              to={`/notes/${item.id}`}
+              to={noteRoute(item.id)}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-1.5 rounded-md px-2 py-1 text-sm transition',
