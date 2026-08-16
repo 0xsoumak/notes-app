@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import { noteRoute } from '@/app/routes'
 import { IconButton } from '@/components/ui/IconButton'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
-import { NewFolderIcon, NewNoteIcon, SearchIcon, SettingsIcon } from '@/components/ui/icons'
+import { NewFolderIcon, NewNoteIcon, SearchIcon, SettingsIcon, XIcon } from '@/components/ui/icons'
 import {
   SyncButton,
   TreeSearchResults,
@@ -13,7 +13,12 @@ import {
   useWorkspace,
 } from '@/features/workspace'
 
-export function Sidebar() {
+interface SidebarProps {
+  /** Supplied only when the sidebar is a drawer, which needs its own dismiss. */
+  onClose?: () => void
+}
+
+export function Sidebar({ onClose }: SidebarProps) {
   const { items, isLoading, createNote, createFolder } = useWorkspace()
   const { expandedIds, toggle, expand } = useExpandedIds()
   const activeNoteId = useNotePath()
@@ -33,7 +38,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="bg-surface-muted border-border-subtle flex h-full w-64 shrink-0 flex-col border-r">
+    <aside className="bg-surface-muted border-border-subtle flex h-full w-full shrink-0 flex-col border-r md:w-64">
       <div className="flex items-center gap-1 px-3 py-3">
         <span className="text-content flex-1 text-sm font-semibold">Notes</span>
         <IconButton label="New note" onClick={() => void handleCreateNote()}>
@@ -43,6 +48,11 @@ export function Sidebar() {
           <NewFolderIcon className="size-4" />
         </IconButton>
         <ThemeToggle />
+        {onClose && (
+          <IconButton label="Close navigation" onClick={onClose}>
+            <XIcon className="size-4" />
+          </IconButton>
+        )}
       </div>
 
       <div className="px-3 pb-2">

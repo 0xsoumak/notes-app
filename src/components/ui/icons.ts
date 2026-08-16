@@ -22,4 +22,5 @@ export {
   Sidebar as SidebarIcon,
   Sun as SunIcon,
   Trash as TrashIcon,
+  X as XIcon,
 } from '@phosphor-icons/react'

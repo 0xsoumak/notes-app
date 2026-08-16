@@ -30,7 +30,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl px-6 py-16">
+    <div className="mx-auto w-full max-w-xl px-4 py-10 sm:px-6 sm:py-16">
       <h1 className="text-content text-2xl font-bold">GitHub sync</h1>
       <p className="text-content-muted mt-2 text-sm">
         Notes are stored as <code>.md</code> files in a repository you own, mirroring the folder
@@ -49,7 +49,7 @@ export function SettingsPage() {
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Owner">
             <input
               value={form.owner}
@@ -88,7 +88,7 @@ export function SettingsPage() {
           </p>
         )}
 
-        <div className="flex items-center gap-2 pt-2">
+        <div className="flex flex-col items-stretch gap-2 pt-2 sm:flex-row sm:items-center">
           <Button type="submit" variant="primary" disabled={status === 'syncing'}>
             {status === 'syncing' ? 'Checking…' : 'Connect'}
           </Button>

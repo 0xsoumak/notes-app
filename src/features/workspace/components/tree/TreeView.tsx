@@ -3,7 +3,8 @@ import {
   DndContext,
   DragOverlay,
   MeasuringStrategy,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   closestCenter,
   useSensor,
   useSensors,
@@ -25,6 +26,15 @@ import { TreeRowGhost } from './TreeRowGhost'
 /** Ignore micro-movements so a click still reads as a click, not a drag. */
 const DRAG_ACTIVATION_DISTANCE = 4
 
+/**
+ * Touch has to distinguish a drag from a scroll, and distance cannot do it —
+ * both start as a finger moving. A press-and-hold does, at the cost of a
+ * deliberate pause before a row lifts.
+ */
+const TOUCH_ACTIVATION_DELAY_MS = 220
+/** How far the finger may drift during that hold before it counts as a scroll. */
+const TOUCH_ACTIVATION_TOLERANCE = 6
+
 interface TreeViewProps {
   activeNoteId: string | undefined
   expandedIds: ReadonlySet<string>
@@ -40,9 +50,18 @@ export function TreeView({ activeNoteId, expandedIds, onToggle, onExpand }: Tree
   const [overId, setOverId] = useState<string | null>(null)
   const [offsetX, setOffsetX] = useState(0)
 
+  // Mouse and touch are split rather than handled by one PointerSensor: a
+  // pointer sensor treats a finger like a mouse, so any downward swipe on the
+  // tree started a drag and the sidebar could not be scrolled on a phone.
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(MouseSensor, {
       activationConstraint: { distance: DRAG_ACTIVATION_DISTANCE },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: TOUCH_ACTIVATION_DELAY_MS,
+        tolerance: TOUCH_ACTIVATION_TOLERANCE,
+      },
     }),
   )
 

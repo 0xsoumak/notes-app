@@ -67,7 +67,8 @@ export function TreeRow({
       <div
         style={{ paddingLeft: depth * INDENT_PX + 4 }}
         className={cn(
-          'flex items-center gap-1 rounded-md py-1 pr-1 text-sm transition',
+          // Taller rows on touch, where a 28px target is hard to hit reliably.
+          'flex items-center gap-1 rounded-md py-2 pr-1 text-sm transition md:py-1',
           isActive
             ? 'bg-surface-hover text-content font-medium'
             : 'text-content-muted hover:bg-surface-hover hover:text-content',
@@ -115,27 +116,30 @@ export function TreeRow({
         {/* Stop pointerdown here so the row's drag sensor ignores these buttons. */}
         <div
           onPointerDown={(event) => event.stopPropagation()}
-          className="flex shrink-0 items-center opacity-0 transition group-hover/row:opacity-100 focus-within:opacity-100"
+          onTouchStart={(event) => event.stopPropagation()}
+          // Revealed on hover at desktop widths, but permanently visible below
+          // `md`: there is no hover on touch, so these would be unreachable.
+          className="flex shrink-0 items-center opacity-100 transition md:opacity-0 md:group-hover/row:opacity-100 md:focus-within:opacity-100"
         >
           {folder && (
             <>
               <IconButton
                 label="New note in folder"
                 onClick={() => onCreateNote(node.id)}
-                className="size-5"
+                className="size-7 md:size-5"
               >
                 <NewNoteIcon className="size-3.5" />
               </IconButton>
               <IconButton
                 label="New folder inside"
                 onClick={() => onCreateFolder(node.id)}
-                className="size-5"
+                className="size-7 md:size-5"
               >
                 <NewFolderIcon className="size-3.5" />
               </IconButton>
             </>
           )}
-          <IconButton label={`Delete ${node.item.title}`} onClick={() => onDelete(node.id)} className="size-5">
+          <IconButton label={`Delete ${node.item.title}`} onClick={() => onDelete(node.id)} className="size-7 md:size-5">
             <TrashIcon className="size-3.5" />
           </IconButton>
         </div>

@@ -5,7 +5,31 @@
     height: 100%;
   }
 
+  /*
+   * Dynamic viewport units: on mobile browsers the address bar shrinks and
+   * grows, and `100%` resolves against the tallest state — enough to push the
+   * sidebar's footer below the fold.
+   */
+  #root {
+    height: 100dvh;
+  }
+
   body {
     @apply bg-surface text-content antialiased;
+    /* Keeps a scroll inside the tree or the note from turning into the
+     * browser's own pull-to-refresh. */
+    overscroll-behavior-y: contain;
+  }
+
+  /*
+   * iOS zooms the page when a focused field's text is under 16px. The app's
+   * chrome is deliberately smaller than that, so the minimum is restored only
+   * where a caret can land. `textarea` is left out on purpose — the note title
+   * sets its own much larger size.
+   */
+  @media (pointer: coarse) {
+    input {
+      font-size: 16px;
+    }
   }
 }

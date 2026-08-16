@@ -41,7 +41,7 @@ export function NoteIconPicker({ icon, onChange }: NoteIconPickerProps) {
         onClick={() => setIsOpen((open) => !open)}
         aria-label="Change note icon"
         aria-expanded={isOpen}
-        className="hover:bg-surface-hover block cursor-pointer rounded-lg p-1 text-4xl leading-none transition"
+        className="hover:bg-surface-hover block cursor-pointer rounded-lg p-1 text-3xl leading-none transition sm:text-4xl"
       >
         {icon}
       </button>

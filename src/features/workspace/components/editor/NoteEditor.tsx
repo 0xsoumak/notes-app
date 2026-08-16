@@ -69,7 +69,7 @@ export function NoteEditor({
   }
 
   return (
-    <article className="mx-auto w-full max-w-3xl px-6 py-12 sm:px-12">
+    <article className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-12 sm:py-12">
       <NoteTitle
         title={note.title}
         icon={note.icon}
