@@ -16,6 +16,7 @@ export {
   Folder as FolderIcon,
   FolderOpen as FolderOpenIcon,
   FolderPlus as NewFolderIcon,
+  House as HomeIcon,
   MagnifyingGlass as SearchIcon,
   Moon as MoonIcon,
   Plus as PlusIcon,

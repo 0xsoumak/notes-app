@@ -1,17 +1,11 @@
-import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { noteRoute } from '@/app/routes'
 import { IconButton } from '@/components/ui/IconButton'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { NewFolderIcon, NewNoteIcon, SearchIcon, SettingsIcon, XIcon } from '@/components/ui/icons'
-import {
-  SyncButton,
-  TreeSearchResults,
-  TreeView,
-  useExpandedIds,
-  useNotePath,
-  useWorkspace,
-} from '@/features/workspace'
+import { COMMAND_MENU_SHORTCUT, useCommandMenu } from '@/features/command-menu'
+import { SyncButton, TreeView, useExpandedIds, useNotePath, useWorkspace } from '@/features/workspace'
+import { cn } from '@/lib/cn'
 
 interface SidebarProps {
   /** Supplied only when the sidebar is a drawer, which needs its own dismiss. */
@@ -23,14 +17,7 @@ export function Sidebar({ onClose }: SidebarProps) {
   const { expandedIds, toggle, expand } = useExpandedIds()
   const activeNoteId = useNotePath()
   const navigate = useNavigate()
-
-  const [query, setQuery] = useState('')
-  const trimmedQuery = query.trim().toLowerCase()
-
-  const matches = useMemo(() => {
-    if (!trimmedQuery) return []
-    return items.filter((item) => item.title.toLowerCase().includes(trimmedQuery))
-  }, [items, trimmedQuery])
+  const commandMenu = useCommandMenu()
 
   const handleCreateNote = async () => {
     const path = await createNote(null)
@@ -56,23 +43,27 @@ export function Sidebar({ onClose }: SidebarProps) {
       </div>
 
       <div className="px-3 pb-2">
-        <div className="focus-within:border-content-muted/40 border-border-subtle bg-surface flex items-center gap-2 rounded-md border px-2 py-1.5 transition">
-          <SearchIcon className="text-content-muted size-3.5" />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search"
-            aria-label="Search notes and folders"
-            className="placeholder:text-content-muted/70 w-full bg-transparent text-xs outline-none"
-          />
-        </div>
+        {/* Looks like a field but is a button: typing happens in the command
+            menu, so the box only has to be the thing you click. */}
+        <button
+          type="button"
+          onClick={commandMenu.open}
+          className={cn(
+            'border-border-subtle bg-surface flex w-full cursor-pointer items-center gap-2 rounded-md border px-2 py-1.5 transition',
+            'hover:border-content-muted/40 focus-visible:border-content-muted/40 focus-visible:outline-none',
+          )}
+        >
+          <SearchIcon className="text-content-muted size-3.5 shrink-0" />
+          <span className="text-content-muted/70 flex-1 text-left text-xs">Search</span>
+          <kbd className="border-border-subtle text-content-muted/70 rounded border px-1 py-px text-[10px] font-sans">
+            {COMMAND_MENU_SHORTCUT}
+          </kbd>
+        </button>
       </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
         {isLoading ? (
           <p className="text-content-muted px-2 py-6 text-center text-xs">Loading…</p>
-        ) : trimmedQuery ? (
-          <TreeSearchResults matches={matches} />
         ) : items.length === 0 ? (
           <p className="text-content-muted px-2 py-6 text-center text-xs">
             Nothing here yet. Create a note or folder above.

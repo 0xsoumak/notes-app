@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useTheme } from '@/app/providers/theme-context'
 import { BlockNoteView } from '@blocknote/mantine'
 import { useCreateBlockNote } from '@blocknote/react'
-import { useTheme } from '@/app/providers/theme-context'
-import { formatRelativeTime } from '@/lib/format-date'
+import { useEffect, useRef, useState } from 'react'
 import type { NoteItem } from '../../types'
 import { NoteTitle } from './NoteTitle'
 
@@ -77,10 +76,6 @@ export function NoteEditor({
         onIconChange={onIconChange}
         onCommit={() => editor.focus()}
       />
-
-      <p className="text-content-muted mb-6 text-xs">
-        {note.isDirty ? 'Unsynced changes' : `Edited ${formatRelativeTime(note.updatedAt)}`}
-      </p>
 
       <div className={isHydrated ? undefined : 'invisible'}>
         <BlockNoteView editor={editor} theme={theme} onChange={() => void handleChange()} />

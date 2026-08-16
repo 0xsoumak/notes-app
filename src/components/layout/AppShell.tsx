@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { IconButton } from '@/components/ui/IconButton'
-import { SidebarIcon } from '@/components/ui/icons'
+import { SearchIcon, SidebarIcon } from '@/components/ui/icons'
+import { useCommandMenu } from '@/features/command-menu'
+import { SyncFab } from '@/features/workspace'
 import { cn } from '@/lib/cn'
 import { useMediaQuery } from '@/lib/hooks/use-media-query'
 import { Sidebar } from './Sidebar'
@@ -19,6 +21,7 @@ export function AppShell() {
   const isDesktop = useMediaQuery(DESKTOP_QUERY)
   const [isSidebarOpen, setIsSidebarOpen] = useState(isDesktop)
   const { pathname } = useLocation()
+  const commandMenu = useCommandMenu()
 
   // Crossing the breakpoint resets to that layout's natural state: open on
   // desktop, out of the way on mobile.
@@ -91,13 +94,19 @@ export function AppShell() {
             >
               <SidebarIcon className="size-5" />
             </IconButton>
-            <span className="text-content text-sm font-semibold">Notes</span>
+            <span className="text-content flex-1 text-sm font-semibold">Notes</span>
+            <IconButton label="Search" onClick={commandMenu.open} className="size-8">
+              <SearchIcon className="size-5" />
+            </IconButton>
           </header>
         )}
 
         <main className="min-h-0 flex-1 overflow-x-clip overflow-y-auto">
           <Outlet />
         </main>
+
+        {/* Outside <main> so it stays put while the note scrolls under it. */}
+        <SyncFab />
       </div>
     </div>
   )

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { BrowserRouter } from 'react-router'
+import { CommandMenuProvider } from '@/features/command-menu'
 import { SyncProvider, WorkspaceProvider } from '@/features/workspace'
 import { ThemeProvider } from './ThemeProvider'
 
@@ -13,7 +14,10 @@ export function AppProviders({ children }: AppProvidersProps) {
     <BrowserRouter>
       <ThemeProvider>
         <WorkspaceProvider>
-          <SyncProvider>{children}</SyncProvider>
+          <SyncProvider>
+            {/* Innermost: its actions read from every provider above it. */}
+            <CommandMenuProvider>{children}</CommandMenuProvider>
+          </SyncProvider>
         </WorkspaceProvider>
       </ThemeProvider>
     </BrowserRouter>
