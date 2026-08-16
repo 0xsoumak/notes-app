@@ -34,7 +34,7 @@ export function useNote(path: string | undefined) {
 
   // Normalised to `null` for "no such note", so `undefined` means only one
   // thing: no resolved read for the current path yet.
-  const file = result?.path === path ? result.file : undefined
+  const file = result && result.path === path ? result.file : undefined
 
   const item = items.find((candidate) => candidate.id === path)
   const note = item && isNote(item) ? item : null

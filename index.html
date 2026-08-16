@@ -3,7 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- `viewport-fit=cover` lets the standalone window paint into the safe
+         areas rather than letterboxing on notched phones. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Overwritten at runtime by ThemeProvider; these are the pre-hydration
+         values so the first paint is not the wrong colour. -->
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Notes" />
+    <meta name="description" content="A local-first notebook that syncs to a GitHub repository." />
     <title>Notes</title>
   </head>
   <body>
