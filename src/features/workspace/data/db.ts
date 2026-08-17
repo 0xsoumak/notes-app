@@ -16,6 +16,15 @@ export interface LocalFile {
   remotePath: string | null
   /** Markdown body. Empty for `.gitkeep`. */
   content: string
+  /**
+   * The body as it stood at the last sync — the baseline a revert restores.
+   * `null` when there is no such version: a file created locally and never
+   * pushed, or a row written before this column existed.
+   *
+   * Keeping the baseline locally is what makes reverting an offline operation,
+   * which for a local-first notebook it has to be.
+   */
+  syncedContent: string | null
   /** Remote blob SHA, or `null` if never pushed. */
   sha: string | null
   /**
@@ -25,6 +34,12 @@ export interface LocalFile {
   isDirty: 0 | 1
   isDeleted: 0 | 1
   updatedAt: number
+  /**
+   * Bumped only when `content` is replaced from outside the editor — by a pull
+   * or a revert. The editor seeds itself once per mount, so it keys off this to
+   * know it must re-read; ordinary typing leaves it alone and never remounts.
+   */
+  contentRevision: number
 }
 
 /** Small key/value store for sync bookkeeping. */
@@ -42,6 +57,20 @@ db.version(1).stores({
   files: 'path, remotePath, isDirty, isDeleted',
   meta: 'key',
 })
+
+// `syncedContent` and `contentRevision` are not indexed, so the schema itself is
+// unchanged — this version exists purely to backfill them. A row that was clean
+// at upgrade time is its own baseline; a dirty one has no recoverable baseline,
+// and revert falls back to re-pulling it.
+db.version(2).upgrade((tx) =>
+  tx
+    .table<LocalFile>('files')
+    .toCollection()
+    .modify((file) => {
+      file.syncedContent = file.isDirty === 0 && file.remotePath !== null ? file.content : null
+      file.contentRevision = 0
+    }),
+)
 
 export { db }
 

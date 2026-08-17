@@ -6,7 +6,7 @@ import { NoteEditor, useNote, useNotePath, useWorkspace } from '@/features/works
 
 export function NotePage() {
   const path = useNotePath()
-  const { note, content, isLoading, isMissing, saveContent } = useNote(path)
+  const { note, content, contentRevision, isLoading, isMissing, saveContent } = useNote(path)
   const { renameItem, setItemIcon } = useWorkspace()
   const navigate = useNavigate()
 
@@ -32,7 +32,10 @@ export function NotePage() {
 
   return (
     <NoteEditor
-      key={note.id}
+      // The revision is part of the key so a revert or a pull re-seeds the
+      // editor; without it the reverted note would keep showing the discarded
+      // body until it was navigated away from and back.
+      key={`${note.id}:${contentRevision}`}
       note={note}
       content={content}
       onContentChange={saveContent}

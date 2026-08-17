@@ -10,7 +10,7 @@ import {
   type GitHubConfig,
 } from '../github/github-config'
 import { SyncContext, type SyncContextValue, type SyncStatus } from './sync-context'
-import { runSync, type SyncReport } from './sync-engine'
+import { runPull, runSync, type SyncReport } from './sync-engine'
 
 const LAST_SYNCED_KEY = 'lastSyncedAt'
 const REPO_FINGERPRINT_KEY = 'repoFingerprint'
@@ -26,35 +26,76 @@ export function SyncProvider({ children }: SyncProviderProps) {
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
   const [lastReport, setLastReport] = useState<SyncReport | null>(null)
 
-  // Guards against a second sync starting while one is in flight.
+  // Guards against a second run starting while one is in flight.
   const inFlightRef = useRef(false)
 
   useEffect(() => {
     void readMeta<number>(LAST_SYNCED_KEY).then((value) => setLastSyncedAt(value ?? null))
   }, [])
 
-  const sync = useCallback(async () => {
-    if (!config || inFlightRef.current) return
+  /**
+   * Shared body of both sync paths: one run at a time, and the clock advanced
+   * only once the remote has actually answered.
+   *
+   * `quiet` is for the launch pull, which nobody asked for and so reports
+   * nothing when it fails.
+   */
+  const run = useCallback(
+    async (operation: (config: GitHubConfig) => Promise<SyncReport>, quiet = false) => {
+      if (!config || inFlightRef.current) return
 
-    inFlightRef.current = true
-    setStatus('syncing')
-    setError(null)
+      inFlightRef.current = true
+      setStatus('syncing')
+      setError(null)
 
-    try {
-      const report = await runSync(config)
-      const syncedAt = Date.now()
+      try {
+        const report = await operation(config)
+        const syncedAt = Date.now()
 
-      await writeMeta(LAST_SYNCED_KEY, syncedAt)
-      setLastSyncedAt(syncedAt)
-      setLastReport(report)
-      setStatus('idle')
-    } catch (caught) {
-      setError(describeGitHubError(caught))
-      setStatus('error')
-    } finally {
-      inFlightRef.current = false
-    }
-  }, [config])
+        await writeMeta(LAST_SYNCED_KEY, syncedAt)
+        setLastSyncedAt(syncedAt)
+        setLastReport(report)
+        setStatus('idle')
+      } catch (caught) {
+        if (quiet) {
+          setStatus('idle')
+        } else {
+          setError(describeGitHubError(caught))
+          setStatus('error')
+        }
+      } finally {
+        inFlightRef.current = false
+      }
+    },
+    [config],
+  )
+
+  const sync = useCallback(() => run(runSync), [run])
+
+  /**
+   * Pulls once when the app opens, so a notebook edited on another device is
+   * current before it is read — the thing a manual-only sync cannot give you,
+   * since by the time you notice the notes are stale you have already read them.
+   *
+   * Pull, not sync: taking a fresh copy of a repository is not an action that
+   * needs asking about, but writing a commit to one is. Pending local work
+   * stays pending until the user presses Sync.
+   *
+   * Failures are swallowed. Opening an installed app offline is ordinary, and a
+   * bad token is worth reporting when the user asks to sync — not as the first
+   * thing they see on launch. Every note is on disk either way.
+   */
+  const launchedRef = useRef(false)
+
+  useEffect(() => {
+    // Only the config present at mount matters: connecting later in the session
+    // runs its own first sync, and this must not fire a second time.
+    if (launchedRef.current) return
+    launchedRef.current = true
+    if (!config) return
+
+    void run(runPull, true)
+  }, [config, run])
 
   const connect = useCallback(async (next: GitHubConfig) => {
     setStatus('syncing')

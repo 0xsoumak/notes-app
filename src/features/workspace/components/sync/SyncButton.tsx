@@ -1,4 +1,4 @@
-import { CloudIcon, SpinnerIcon, WarningIcon } from '@/components/ui/icons'
+import { SyncIcon, SpinnerIcon, WarningIcon } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
 import { formatRelativeTime } from '@/lib/format-date'
 import { useWorkspace } from '../../hooks/use-workspace'
@@ -26,7 +26,7 @@ export function SyncButton({ onConnect }: SyncButtonProps) {
         onClick={onConnect}
         className="text-content-muted hover:bg-surface-hover hover:text-content flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition"
       >
-        <CloudIcon className="size-4" />
+        <SyncIcon className="size-4" />
         Connect GitHub
       </button>
     )
@@ -51,7 +51,7 @@ export function SyncButton({ onConnect }: SyncButtonProps) {
         ) : status === 'error' ? (
           <WarningIcon className="size-4 text-amber-500" />
         ) : (
-          <CloudIcon className="size-4" />
+          <SyncIcon className="size-4" />
         )}
 
         <span className="flex-1 text-left">

@@ -1,8 +1,9 @@
 import { useCallback, useMemo, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { buildItems } from '../data/build-items'
+import { buildItems, collectChangedIds } from '../data/build-items'
 import { db } from '../data/db'
 import { parseNotesIndex } from '../data/notes-index'
+import { revertAll, revertItem } from '../data/revert'
 import * as store from '../data/workspace-store'
 import { INDEX_FILE } from '../paths'
 import type { DropTarget } from '../tree/drop-projection'
@@ -29,6 +30,8 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
     [files],
   )
 
+  const changedIds = useMemo(() => collectChangedIds(files ?? []), [files])
+
   const moveItem = useCallback(
     async (activeId: string, target: DropTarget) => {
       const positions = computeMoves(items, activeId, target)
@@ -43,6 +46,7 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       items,
       isLoading: files === undefined,
       pendingCount,
+      changedIds,
       createNote: (parentId = null) => store.createNote(parentId),
       createFolder: async (parentId = null) => {
         await store.createFolder(parentId)
@@ -51,8 +55,10 @@ export function WorkspaceProvider({ children }: WorkspaceProviderProps) {
       setItemIcon: store.setItemIcon,
       deleteItem: store.deleteItem,
       moveItem,
+      revertItem: async (id) => (await revertItem(id)).restoredPath,
+      revertAll,
     }),
-    [items, files, pendingCount, moveItem],
+    [items, files, pendingCount, changedIds, moveItem],
   )
 
   return <WorkspaceContext value={value}>{children}</WorkspaceContext>

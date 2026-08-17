@@ -1,5 +1,5 @@
 import { db, type LocalFile } from '../data/db'
-import { createGitHubClient, type TreeChange } from '../github/github-client'
+import { createGitHubClient, type RemoteFile, type TreeChange } from '../github/github-client'
 import type { GitHubConfig } from '../github/github-config'
 
 export interface SyncReport {
@@ -30,21 +30,80 @@ function commitMessage(lines: string[]): string {
  */
 export async function runSync(config: GitHubConfig): Promise<SyncReport> {
   const client = createGitHubClient(config)
-  const report: SyncReport = { pulled: 0, pushed: 0, moved: 0, deleted: 0, warnings: [] }
+  const report = emptyReport()
 
+  await pullInto(client, report)
+  await push(client, report)
+
+  return report
+}
+
+/**
+ * The pull half on its own — brings the remote down without sending anything up.
+ *
+ * This is what runs on launch. Committing to someone's repository is an action
+ * they should have asked for, whereas taking a fresh copy of it is not, so the
+ * automatic run stops short of the push and leaves pending work pending.
+ */
+export async function runPull(config: GitHubConfig): Promise<SyncReport> {
+  const client = createGitHubClient(config)
+  const report = emptyReport()
+
+  await pullInto(client, report)
+
+  return report
+}
+
+function emptyReport(): SyncReport {
+  return { pulled: 0, pushed: 0, moved: 0, deleted: 0, warnings: [] }
+}
+
+async function pullInto(client: Client, report: SyncReport): Promise<void> {
   const tree = await client.getTree()
   if (tree.truncated) {
     report.warnings.push('Repository is too large to list in one request; some files were skipped.')
   }
 
   await pull(client, tree.entries, report)
-  await push(client, report)
-
-  return report
 }
 
 type Client = ReturnType<typeof createGitHubClient>
 type RemoteEntries = Awaited<ReturnType<Client['getTree']>>['entries']
+
+/**
+ * Writes a freshly fetched file to the row at `path`, unless the user has
+ * touched it in the meantime.
+ *
+ * The dirty check in [`pull`] happens against a list read before the network
+ * round trip, which leaves a window a keystroke can land in — a window the
+ * launch pull is especially likely to hit, since that is exactly when someone
+ * opens a note and starts typing. Re-reading inside the transaction closes it.
+ *
+ * Returns whether the write actually happened.
+ */
+async function store(path: string, remotePath: string, remote: RemoteFile): Promise<boolean> {
+  return db.transaction('rw', db.files, async () => {
+    const current = await db.files.get(path)
+    if (current && (current.isDirty === 1 || current.isDeleted === 1)) return false
+
+    await db.files.put({
+      path,
+      remotePath,
+      content: remote.content,
+      // What just arrived is by definition the last-synced version, and so the
+      // baseline a later revert restores.
+      syncedContent: remote.content,
+      sha: remote.sha,
+      isDirty: 0,
+      isDeleted: 0,
+      updatedAt: Date.now(),
+      // The body was replaced under whoever is reading it, so an open editor
+      // has to re-seed from it.
+      contentRevision: (current?.contentRevision ?? 0) + 1,
+    })
+    return true
+  })
+}
 
 async function pull(client: Client, entries: RemoteEntries, report: SyncReport): Promise<void> {
   const blobs = entries.filter((entry) => entry.type === 'blob')
@@ -66,16 +125,7 @@ async function pull(client: Client, entries: RemoteEntries, report: SyncReport):
 
     try {
       const remote = await client.readFile(entry.path)
-      await db.files.put({
-        path: local?.path ?? entry.path,
-        remotePath: entry.path,
-        content: remote.content,
-        sha: remote.sha,
-        isDirty: 0,
-        isDeleted: 0,
-        updatedAt: Date.now(),
-      })
-      report.pulled += 1
+      if (await store(local?.path ?? entry.path, entry.path, remote)) report.pulled += 1
     } catch (error) {
       report.warnings.push(`Could not read ${entry.path}: ${messageOf(error)}`)
     }
@@ -175,6 +225,10 @@ async function settle(
       updates.push({
         ...row,
         remotePath: sent.path,
+        // What landed upstream is the new baseline, even if the row has since
+        // moved on — reverting now goes back to the pushed version, not to
+        // whatever preceded it.
+        syncedContent: sent.content,
         // Missing only if the new tree came back truncated; keeping the old SHA
         // costs at most one redundant pull next sync.
         sha: shas?.get(sent.path) ?? row.sha,
