@@ -2,7 +2,6 @@
 export { NoteEditor } from './components/editor/NoteEditor'
 export { RevertAllButton } from './components/sync/RevertAllButton'
 export { SyncButton } from './components/sync/SyncButton'
-export { SyncFab } from './components/sync/SyncFab'
 export { TreeView } from './components/tree/TreeView'
 export { useExpandedIds } from './hooks/use-expanded-ids'
 export { useNote } from './hooks/use-note'
