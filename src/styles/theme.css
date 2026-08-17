@@ -13,6 +13,11 @@
   --color-border-subtle: #e6e6e3;
   --color-content: #37352f;
   --color-content-muted: #787774;
+
+  /* Editor accents: the pressed state of a toolbar button, and the fill
+   * behind highlighted text. */
+  --color-accent: #2383e2;
+  --color-highlight: #fbf3a7;
 }
 
 .dark {
@@ -22,4 +27,6 @@
   --color-border-subtle: #2f2f2f;
   --color-content: #e9e9e7;
   --color-content-muted: #9b9a97;
+  --color-accent: #529cca;
+  --color-highlight: #6b5c1f;
 }

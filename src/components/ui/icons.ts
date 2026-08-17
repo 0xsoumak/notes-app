@@ -28,3 +28,26 @@ export {
   Trash as TrashIcon,
   X as XIcon,
 } from '@phosphor-icons/react'
+
+/* Editor formatting glyphs. */
+export {
+  TextB as BoldIcon,
+  TextItalic as ItalicIcon,
+  TextStrikethrough as StrikethroughIcon,
+  TextUnderline as UnderlineIcon,
+  CodeSimple as CodeIcon,
+  Highlighter as HighlightIcon,
+  LinkSimple as LinkIcon,
+  LinkBreak as UnlinkIcon,
+  TextHOne as HeadingOneIcon,
+  TextHTwo as HeadingTwoIcon,
+  TextHThree as HeadingThreeIcon,
+  ListBullets as BulletListIcon,
+  ListNumbers as OrderedListIcon,
+  ListChecks as TaskListIcon,
+  Quotes as QuoteIcon,
+  CodeBlock as CodeBlockIcon,
+  Table as TableIcon,
+  Check as CheckIcon,
+  TextTSlash as ClearFormattingIcon,
+} from '@phosphor-icons/react'

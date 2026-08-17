@@ -4,13 +4,12 @@ import { App } from './app/App'
 
 /*
  * Stylesheet order is load-bearing and follows this import order:
- *   1. our Tailwind preflight + design tokens
- *   2. BlockNote's stylesheets, so the editor's resets survive preflight
- *   3. our overrides on top of BlockNote
+ *   1. the Inter webfont the design tokens name
+ *   2. our Tailwind preflight + design tokens
+ *   3. the note body's own styles, which override preflight's element resets
  */
+import '@fontsource-variable/inter'
 import './styles/index.css'
-import '@blocknote/core/fonts/inter.css'
-import '@blocknote/mantine/style.css'
 import './styles/editor.css'
 
 createRoot(document.getElementById('root')!).render(
