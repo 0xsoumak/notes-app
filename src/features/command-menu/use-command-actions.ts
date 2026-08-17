@@ -2,7 +2,7 @@ import { useMemo, type ComponentType } from 'react'
 import { useNavigate } from 'react-router'
 import { HOME_ROUTE, noteRoute } from '@/app/routes'
 import {
-  CloudIcon,
+  SyncIcon,
   HomeIcon,
   NewFolderIcon,
   NewNoteIcon,
@@ -73,7 +73,7 @@ export function useCommandActions(): CommandAction[] {
         title: 'Sync now',
         keywords: 'github push pull commit',
         hint: pendingCount > 0 ? `${pendingCount} pending` : undefined,
-        icon: CloudIcon,
+        icon: SyncIcon,
         // Firing a second sync mid-run would race the first; the sidebar
         // and the floating button disable themselves for the same reason.
         run: () => (status === 'syncing' ? undefined : sync()),
@@ -83,7 +83,7 @@ export function useCommandActions(): CommandAction[] {
         id: 'connect',
         title: 'Connect GitHub',
         keywords: 'sync setup repository token settings',
-        icon: CloudIcon,
+        icon: SyncIcon,
         run: () => settingsDialog.open('github'),
       })
     }

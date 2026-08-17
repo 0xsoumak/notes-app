@@ -1,4 +1,4 @@
-import { CloudIcon, SpinnerIcon, WarningIcon } from '@/components/ui/icons'
+import { SyncIcon, SpinnerIcon, WarningIcon } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
 import { formatRelativeTime } from '@/lib/format-date'
 import { useWorkspace } from '../../hooks/use-workspace'
@@ -8,20 +8,21 @@ import { useSync } from '../../sync/sync-context'
 const MAX_BADGE_COUNT = 99
 
 const SHELL_CLASSES = cn(
-  'flex size-12 items-center justify-center rounded-full transition',
-  'bg-content text-surface shadow-lg shadow-black/20',
-  'hover:opacity-90 active:scale-95',
-  'focus-visible:ring-content/30 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none',
+  'flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1.5 transition',
+  'text-content-muted hover:bg-surface-hover hover:text-content',
+  'disabled:cursor-default disabled:opacity-70',
+  'focus-visible:ring-content/20 focus-visible:ring-2 focus-visible:outline-none',
 )
 
 /**
- * Floating sync trigger, anchored to the bottom-right of the content area on
- * every screen size. The sidebar keeps its own [`SyncButton`] — that one is
- * the status readout you go looking for, this one is the action within thumb
- * reach, which on mobile is the only one visible while the drawer is closed.
+ * Sync trigger pinned to the top-right of the content area on every screen size.
+ * The sidebar keeps its own [`SyncButton`] — that one is the status readout you
+ * go looking for, this one is the always-visible action, which on mobile is the
+ * only one reachable while the drawer is closed.
  *
- * Unsynced work is surfaced as a bubble counter rather than as text: the
- * number is the whole message at this size.
+ * It sits over the note, so it stays quiet: an icon and, when there is work
+ * waiting, a count. At this size the number is the whole message, and no
+ * container is needed to carry it.
  */
 interface SyncFabProps {
   /** See [`SyncButton`]'s note on why this crosses in as a prop. */
@@ -32,9 +33,10 @@ export function SyncFab({ onConnect }: SyncFabProps) {
   const { isConfigured, status, error, lastSyncedAt, sync } = useSync()
   const { pendingCount } = useWorkspace()
 
-  // Positioned by the caller's container. The inset clears the iOS home
-  // indicator, which otherwise sits under a bottom-right control.
-  const position = 'absolute right-4 bottom-[max(1rem,env(safe-area-inset-bottom))] z-10'
+  // Positioned by the caller's container. Below `md` that container starts with
+  // the 3rem app header, whose own search button already owns the top-right
+  // corner — so the button drops clear of it rather than sitting on top.
+  const position = 'absolute right-3 top-14 z-10 md:top-3'
 
   if (!isConfigured) {
     return (
@@ -43,11 +45,9 @@ export function SyncFab({ onConnect }: SyncFabProps) {
         onClick={onConnect}
         aria-label="Connect GitHub"
         title="Connect GitHub"
-        className={cn(position, 'cursor-pointer')}
+        className={cn(position, SHELL_CLASSES)}
       >
-        <span className={SHELL_CLASSES}>
-          <CloudIcon className="size-5" />
-        </span>
+        <SyncIcon className="size-5" />
       </button>
     )
   }
@@ -62,39 +62,29 @@ export function SyncFab({ onConnect }: SyncFabProps) {
       : `Sync — last synced ${formatRelativeTime(lastSyncedAt ?? 0)}`
 
   return (
-    <div className={position}>
-      <button
-        type="button"
-        onClick={() => void sync()}
-        disabled={isSyncing}
-        aria-label={label}
-        title={error ?? label}
-        className={cn(SHELL_CLASSES, 'cursor-pointer disabled:cursor-default disabled:opacity-70')}
-      >
-        {isSyncing ? (
-          <SpinnerIcon className="size-5 animate-spin" />
-        ) : status === 'error' ? (
-          <WarningIcon className="size-5 text-amber-400" />
-        ) : (
-          <CloudIcon className="size-5" />
-        )}
-      </button>
+    <button
+      type="button"
+      onClick={() => void sync()}
+      disabled={isSyncing}
+      aria-label={label}
+      title={error ?? label}
+      className={cn(position, SHELL_CLASSES)}
+    >
+      {isSyncing ? (
+        <SpinnerIcon className="size-5 animate-spin" />
+      ) : status === 'error' ? (
+        <WarningIcon className="size-5 text-amber-500" />
+      ) : (
+        <SyncIcon className="size-5" />
+      )}
 
       {hasPending && (
         // `aria-hidden`: the count is already spoken as part of the button's
-        // label, and the bubble is not focusable on its own.
-        <span
-          aria-hidden="true"
-          className={cn(
-            'pointer-events-none absolute -top-1 -right-1',
-            'flex h-5 min-w-5 items-center justify-center rounded-full px-1.5',
-            'bg-blue-600 text-[11px] font-semibold text-white tabular-nums',
-            'ring-surface ring-2',
-          )}
-        >
+        // label, and it is not focusable on its own.
+        <span aria-hidden="true" className="text-xs font-medium tabular-nums">
           {pendingCount > MAX_BADGE_COUNT ? `${MAX_BADGE_COUNT}+` : pendingCount}
         </span>
       )}
-    </div>
+    </button>
   )
 }

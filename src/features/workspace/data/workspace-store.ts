@@ -27,11 +27,25 @@ function newFile(path: string, content: string): LocalFile {
     path,
     remotePath: null,
     content,
+    // Never pushed, so there is no earlier version to fall back to. Reverting
+    // such a file removes it, exactly as `git clean` would.
+    syncedContent: null,
     sha: null,
     isDirty: 1,
     isDeleted: 0,
     updatedAt: now(),
+    contentRevision: 0,
   }
+}
+
+/**
+ * Sets `isDirty` by comparing against the last-synced baseline rather than
+ * assuming every write dirties a file. Typing a change and undoing it — or
+ * reverting the last outstanding one — has to leave the file clean again, or
+ * the sync badge keeps counting work that no longer exists.
+ */
+export function markDirtyAgainstBaseline(file: LocalFile): LocalFile {
+  return { ...file, isDirty: file.content === file.syncedContent ? 0 : 1 }
 }
 
 async function takenPaths(): Promise<Set<string>> {
@@ -54,13 +68,14 @@ export async function loadIndex(): Promise<NotesIndex> {
 /** Writes the sidecar index and marks it for the next push. */
 export async function saveIndex(index: NotesIndex): Promise<void> {
   const existing = await db.files.get(INDEX_FILE)
-  await db.files.put({
-    ...(existing ?? newFile(INDEX_FILE, '')),
-    content: serializeNotesIndex(index),
-    isDirty: 1,
-    isDeleted: 0,
-    updatedAt: now(),
-  })
+  await db.files.put(
+    markDirtyAgainstBaseline({
+      ...(existing ?? newFile(INDEX_FILE, '')),
+      content: serializeNotesIndex(index),
+      isDeleted: 0,
+      updatedAt: now(),
+    }),
+  )
 }
 
 async function patchIndex(mutate: (index: NotesIndex) => void): Promise<void> {
@@ -106,7 +121,7 @@ export async function createFolder(parent: string | null): Promise<string> {
 export async function writeNoteContent(path: string, content: string): Promise<void> {
   const row = await db.files.get(path)
   if (!row || row.content === content) return
-  await db.files.put({ ...row, content, isDirty: 1, updatedAt: now() })
+  await db.files.put(markDirtyAgainstBaseline({ ...row, content, updatedAt: now() }))
 }
 
 export async function setItemIcon(path: string, icon: string): Promise<void> {

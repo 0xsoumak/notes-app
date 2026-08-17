@@ -14,6 +14,12 @@ export interface SyncContextValue {
   /** Saves credentials, verifies them against GitHub, then syncs. */
   connect: (config: GitHubConfig) => Promise<void>
   disconnect: () => Promise<void>
+  /**
+   * Pulls remote changes, then pushes local ones. One control for both
+   * directions: the conflict policy is local-wins and a pull never touches a
+   * file with unpushed edits, so which way it goes is never a decision the user
+   * has to make.
+   */
   sync: () => Promise<void>
 }
 

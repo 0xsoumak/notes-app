@@ -4,7 +4,14 @@ import { IconButton } from '@/components/ui/IconButton'
 import { NewFolderIcon, NewNoteIcon, SearchIcon, SettingsIcon, XIcon } from '@/components/ui/icons'
 import { COMMAND_MENU_SHORTCUT, useCommandMenu } from '@/features/command-menu'
 import { useSettingsDialog } from '@/features/settings'
-import { SyncButton, TreeView, useExpandedIds, useNotePath, useWorkspace } from '@/features/workspace'
+import {
+  RevertAllButton,
+  SyncButton,
+  TreeView,
+  useExpandedIds,
+  useNotePath,
+  useWorkspace,
+} from '@/features/workspace'
 import { cn } from '@/lib/cn'
 
 interface SidebarProps {
@@ -80,6 +87,7 @@ export function Sidebar({ onClose }: SidebarProps) {
 
       <div className="border-border-subtle space-y-1 border-t px-2 py-2">
         <SyncButton onConnect={() => settingsDialog.open('github')} />
+        <RevertAllButton />
         <button
           type="button"
           onClick={() => settingsDialog.open()}

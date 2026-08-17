@@ -11,6 +11,7 @@ import {
   NewFolderIcon,
   NewNoteIcon,
   RenameIcon,
+  RevertIcon,
   TrashIcon,
 } from '@/components/ui/icons'
 import { cn } from '@/lib/cn'
@@ -23,6 +24,7 @@ export interface TreeRowActions {
   onToggle: (id: string) => void
   onRename: (id: string, title: string) => void
   onDelete: (id: string) => void
+  onRevert: (id: string) => void
   onCreateNote: (parentId: string) => void
   onCreateFolder: (parentId: string) => void
 }
@@ -30,22 +32,29 @@ export interface TreeRowActions {
 interface TreeRowProps extends TreeRowActions {
   node: FlatNode
   isActive: boolean
+  /**
+   * Whether this item — or, for a folder, anything inside it — has changes that
+   * have not reached the remote yet.
+   */
+  isChanged: boolean
   /** Depth the row is projected to land at, while it is being dragged. */
   projectedDepth?: number
 }
 
 const MENU_ITEM_CLASS = cn(
-  'flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 text-sm outline-none',
+  'flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1 text-sm outline-none',
   'text-content-muted data-highlighted:bg-surface-hover data-highlighted:text-content',
 )
 
 export function TreeRow({
   node,
   isActive,
+  isChanged,
   projectedDepth,
   onToggle,
   onRename,
   onDelete,
+  onRevert,
   onCreateNote,
   onCreateFolder,
 }: TreeRowProps) {
@@ -80,6 +89,21 @@ export function TreeRow({
           />
         }
       >
+        {/* One guide per level of nesting, aligned with the caret column of the
+            ancestor it belongs to, so a deep row can be traced back to its
+            folder without counting indents. Drawn per row rather than as one
+            tall rule because rows are the only thing that knows its depth —
+            and during a drag that depth is the projected one, so the guides
+            follow the row as it changes level. */}
+        {Array.from({ length: depth }, (_, level) => (
+          <span
+            key={level}
+            aria-hidden="true"
+            className="bg-border-subtle pointer-events-none absolute top-0 -bottom-px w-px"
+            style={{ left: (level + 1) * INDENT_PX - 4 }}
+          />
+        ))}
+
         <div
           style={{ paddingLeft: depth * INDENT_PX + 4 }}
           className={cn(
@@ -129,12 +153,24 @@ export function TreeRow({
             onActivate={handleActivate}
             onRename={(title) => onRename(node.id, title)}
           />
+
+          {isChanged && (
+            // Marks work that has not reached GitHub yet. A folder inherits the
+            // dot from its contents, so a change inside a collapsed folder is
+            // still visible from the top of the tree.
+            <span
+              role="img"
+              aria-label="Unsynced changes"
+              title="Unsynced changes"
+              className="bg-content-muted/60 group-hover/row:bg-content-muted mr-1 size-1.5 shrink-0 rounded-full"
+            />
+          )}
         </div>
       </ContextMenu.Trigger>
 
       <ContextMenu.Portal>
         <ContextMenu.Positioner sideOffset={4} align="start">
-          <ContextMenu.Popup className="bg-surface border-border-subtle z-50 min-w-40 rounded-lg border p-1 shadow-lg shadow-black/20 outline-none">
+          <ContextMenu.Popup className="bg-surface border-border-subtle z-50 min-w-40 rounded-xl border p-1 shadow-lg shadow-black/20 outline-none">
             {folder && (
               <>
                 <ContextMenu.Item className={MENU_ITEM_CLASS} onClick={() => onCreateNote(node.id)}>
@@ -158,6 +194,12 @@ export function TreeRow({
               <RenameIcon className="size-4" />
               Rename
             </ContextMenu.Item>
+            {isChanged && (
+              <ContextMenu.Item className={MENU_ITEM_CLASS} onClick={() => onRevert(node.id)}>
+                <RevertIcon className="size-4" />
+                {folder ? 'Revert folder' : 'Revert changes'}
+              </ContextMenu.Item>
+            )}
             <ContextMenu.Item
               className={cn(MENU_ITEM_CLASS, 'data-highlighted:text-red-600')}
               onClick={() => onDelete(node.id)}

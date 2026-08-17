@@ -58,6 +58,13 @@ export function useNote(path: string | undefined) {
     note,
     /** Markdown body, or `undefined` while the lookup is in flight. */
     content: file?.content,
+    /**
+     * Changes only when the body was replaced from outside the editor — a
+     * revert or a pull. The editor seeds itself once per mount, so callers key
+     * it on this to make it re-read; typing does not move it, so an ordinary
+     * edit never remounts the editor out from under the cursor.
+     */
+    contentRevision: file?.contentRevision ?? 0,
     isLoading: file === undefined,
     isMissing: file === null,
     saveContent,

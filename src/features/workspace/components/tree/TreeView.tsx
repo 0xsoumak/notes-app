@@ -17,7 +17,7 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { useNavigate } from 'react-router'
 import { noteRoute } from '@/app/routes'
 import { useWorkspace } from '../../hooks/use-workspace'
-import { isNotePath } from '../../paths'
+import { isDescendantPath, isNotePath, replacePathPrefix } from '../../paths'
 import { getProjection, type DropTarget } from '../../tree/drop-projection'
 import { flattenTree } from '../../tree/flatten-tree'
 import { TreeRow, type TreeRowActions } from './TreeRow'
@@ -43,7 +43,16 @@ interface TreeViewProps {
 }
 
 export function TreeView({ activeNoteId, expandedIds, onToggle, onExpand }: TreeViewProps) {
-  const { items, createNote, createFolder, renameItem, deleteItem, moveItem } = useWorkspace()
+  const {
+    items,
+    changedIds,
+    createNote,
+    createFolder,
+    renameItem,
+    deleteItem,
+    revertItem,
+    moveItem,
+  } = useWorkspace()
   const navigate = useNavigate()
 
   const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -101,6 +110,27 @@ export function TreeView({ activeNoteId, expandedIds, onToggle, onExpand }: Tree
     if (activeNoteId && removed.includes(activeNoteId)) void navigate('/')
   }
 
+  /**
+   * Reverting can move the open note (it undoes renames) or remove it outright
+   * (it was only ever local), so the URL has to follow it either way.
+   */
+  const handleRevert = async (id: string) => {
+    const restored = await revertItem(id)
+    if (!activeNoteId) return
+
+    const wasOpen = activeNoteId === id || isDescendantPath(activeNoteId, id)
+    if (!wasOpen) return
+
+    if (restored === null) {
+      void navigate('/')
+      return
+    }
+    const nextPath = activeNoteId === id ? restored : replacePathPrefix(activeNoteId, id, restored)
+    // The open note may have been a locally created one dropped by the revert;
+    // the note page renders its own "not found" state if so.
+    if (nextPath !== activeNoteId) void navigate(noteRoute(nextPath), { replace: true })
+  }
+
   const handleRename = async (id: string, title: string) => {
     const nextPath = await renameItem(id, title)
     if (nextPath !== id && id === activeNoteId && isNotePath(nextPath)) {
@@ -123,6 +153,7 @@ export function TreeView({ activeNoteId, expandedIds, onToggle, onExpand }: Tree
     onToggle,
     onRename: (id, title) => void handleRename(id, title),
     onDelete: (id) => void handleDelete(id),
+    onRevert: (id) => void handleRevert(id),
     onCreateNote: (parentId) => void handleCreateNote(parentId),
     onCreateFolder: (parentId) => void handleCreateFolder(parentId),
   }
@@ -151,6 +182,7 @@ export function TreeView({ activeNoteId, expandedIds, onToggle, onExpand }: Tree
               key={node.id}
               node={node}
               isActive={node.id === activeNoteId}
+              isChanged={changedIds.has(node.id)}
               projectedDepth={node.id === draggingId ? projection?.depth : undefined}
               {...actions}
             />

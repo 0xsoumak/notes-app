@@ -5,9 +5,10 @@
  * swapping icon sets — or a single glyph — is a one-file change.
  */
 export {
+  ArrowCounterClockwise as RevertIcon,
   CaretRight as CaretRightIcon,
-  CloudArrowUp as CloudIcon,
-  CircleNotch as SpinnerIcon,
+  ArrowsClockwiseIcon as SyncIcon,
+  Spinner as SpinnerIcon,
   GearSix as SettingsIcon,
   Warning as WarningIcon,
   DotsSixVertical as DragHandleIcon,
