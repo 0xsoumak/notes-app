@@ -55,11 +55,23 @@
 }
 
 .tiptap-body ul {
-  list-style: disc;
+  list-style-type: disc;
+}
+.tiptap-body ul ul {
+  list-style-type: circle;
+}
+.tiptap-body ul ul ul {
+  list-style-type: square;
 }
 
 .tiptap-body ol {
-  list-style: decimal;
+  list-style-type: decimal;
+}
+.tiptap-body ol ol {
+  list-style-type: lower-alpha;
+}
+.tiptap-body ol ol ol {
+  list-style-type: lower-roman;
 }
 
 .tiptap-body :is(ul, ol) :is(ul, ol) {
@@ -78,46 +90,21 @@
 
 /* Task lists ------------------------------------------------------------- */
 
-/* The checkbox replaces the marker, and supplies its own indent. */
+/*
+ * The checkbox replaces the marker, and supplies its own indent. Everything
+ * else about a task item — the checkbox itself, the flex layout, the
+ * completed-state strikethrough — is a Base UI `Checkbox` rendered by
+ * `TaskItemView`'s node view, styled with Tailwind classes at the call site
+ * rather than here.
+ */
 .tiptap-body ul[data-type='taskList'] {
   list-style: none;
   padding-left: 0;
 }
 
-.tiptap-body li[data-type='taskItem'] {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-}
-
-/* Tiptap renders the checkbox inside a label of its own; the item's text is
- * the sibling div, which has to take the remaining width. */
-.tiptap-body li[data-type='taskItem'] > label {
-  /* Nudged down to sit on the first line's baseline rather than its top. */
-  margin-top: 0.3em;
-  flex-shrink: 0;
-  user-select: none;
-}
-
-.tiptap-body li[data-type='taskItem'] > div {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.tiptap-body li[data-type='taskItem'] input[type='checkbox'] {
-  accent-color: var(--color-accent);
-  cursor: pointer;
-}
-
-/* A finished item recedes rather than disappearing. */
-.tiptap-body li[data-type='taskItem'][data-checked='true'] > div {
-  color: var(--color-content-muted);
-  text-decoration: line-through;
-}
-
 /* A nested task list re-indents relative to its parent's checkbox. */
 .tiptap-body ul[data-type='taskList'] ul[data-type='taskList'] {
-  padding-left: 0.5rem;
+  padding-left: 1.5rem;
 }
 
 /* Blockquote -------------------------------------------------------------- */

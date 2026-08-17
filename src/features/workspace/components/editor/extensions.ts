@@ -1,5 +1,5 @@
 import { Highlight } from '@tiptap/extension-highlight'
-import { TaskItem, TaskList } from '@tiptap/extension-list'
+import { TaskList } from '@tiptap/extension-list'
 import { TableKit } from '@tiptap/extension-table'
 import { Placeholder } from '@tiptap/extensions'
 import { Markdown } from '@tiptap/markdown'
@@ -8,6 +8,7 @@ import { searchEmojiItems } from './emoji-items'
 import { MarkdownUnderline } from './markdown-underline'
 import { searchSlashItems } from './slash-items'
 import { createSuggestionExtension, type SuggestionController } from './suggestion'
+import { TaskItem } from './TaskItemView'
 
 /**
  * The editor's schema.
