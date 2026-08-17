@@ -1,8 +1,8 @@
 /*
  * App chrome styles: Tailwind, our design tokens, and base element rules.
  *
- * BlockNote's own stylesheets are loaded separately from `main.tsx` so they
- * land after Tailwind's preflight — see the comment there.
+ * The note body's styles are loaded separately from `main.tsx` so they land
+ * after Tailwind's preflight — see the comment there.
  */
 @import 'tailwindcss';
 @import './theme.css';

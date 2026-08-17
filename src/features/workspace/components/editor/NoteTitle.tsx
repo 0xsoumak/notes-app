@@ -42,7 +42,10 @@ export function NoteTitle({ title, icon, onTitleChange, onIconChange, onCommit }
         placeholder="Untitled"
         aria-label="Note title"
         spellCheck={false}
-        className="placeholder:text-content-muted/50 field-sizing-content min-w-0 flex-1 resize-none bg-transparent text-3xl leading-tight font-bold outline-none sm:text-4xl"
+        // `overflow-hidden` suppresses the scrollbar a textarea reserves by
+        // default — `field-sizing-content` already grows it to fit the title,
+        // so there is never anything to scroll.
+        className="placeholder:text-content-muted/50 field-sizing-content min-w-0 flex-1 resize-none overflow-hidden bg-transparent text-3xl leading-tight font-bold outline-none sm:text-4xl"
       />
     </header>
   )

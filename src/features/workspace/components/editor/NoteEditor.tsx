@@ -1,9 +1,12 @@
-import { useTheme } from '@/app/providers/theme-context'
-import { BlockNoteView } from '@blocknote/mantine'
-import { useCreateBlockNote } from '@blocknote/react'
-import { useEffect, useRef, useState } from 'react'
+import { EditorContent, useEditor } from '@tiptap/react'
+import { useMemo } from 'react'
 import type { NoteItem } from '../../types'
+import { createEditorExtensions } from './extensions'
+import { FormatMenu } from './FormatMenu'
 import { NoteTitle } from './NoteTitle'
+import { SuggestionController } from './suggestion'
+import { SuggestionMenu } from './SuggestionMenu'
+import { TableMenu } from './TableMenu'
 
 interface NoteEditorProps {
   note: NoteItem
@@ -17,12 +20,13 @@ interface NoteEditorProps {
 /**
  * Title + rich-text body for a single note.
  *
- * Notes are stored as plain markdown, so the editor parses markdown in on
- * mount and serialises back out on every change. Both conversions are
- * asynchronous, and BlockNote's markdown export is lossy by design.
+ * Markdown is the only storage format: the body is parsed from markdown when
+ * the editor is constructed and serialised straight back on every change.
+ * Because the seed happens at construction rather than in an effect, opening a
+ * note fires no spurious change and cannot mark it dirty.
  *
- * Callers must remount this per note (`key={note.id}`) so the hydration effect
- * runs against the right document.
+ * Callers must remount this per note (`key={note.id}`) so the right document is
+ * loaded.
  */
 export function NoteEditor({
   note,
@@ -31,41 +35,17 @@ export function NoteEditor({
   onTitleChange,
   onIconChange,
 }: NoteEditorProps) {
-  const { resolvedTheme } = useTheme()
-  const [isHydrated, setIsHydrated] = useState(false)
+  const suggestions = useMemo(() => new SuggestionController(), [])
 
-  // Hydration replaces the document, which fires onChange. Without this guard
-  // every note would be marked dirty just by being opened.
-  const isHydratingRef = useRef(true)
-
-  const editor = useCreateBlockNote()
-
-  useEffect(() => {
-    let cancelled = false
-
-    const hydrate = async () => {
-      const blocks = await editor.tryParseMarkdownToBlocks(content)
-      if (cancelled) return
-
-      // An empty note still needs one empty block to be editable.
-      editor.replaceBlocks(editor.document, blocks.length > 0 ? blocks : [{ type: 'paragraph' }])
-      isHydratingRef.current = false
-      setIsHydrated(true)
-    }
-
-    void hydrate()
-    return () => {
-      cancelled = true
-    }
-    // `content` is deliberately not a dependency: this seeds the editor once,
-    // and re-running it on every keystroke would fight the user's cursor.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor])
-
-  const handleChange = async () => {
-    if (isHydratingRef.current) return
-    onContentChange(await editor.blocksToMarkdownLossy(editor.document))
-  }
+  const editor = useEditor({
+    extensions: useMemo(() => createEditorExtensions(suggestions), [suggestions]),
+    content,
+    contentType: 'markdown',
+    onUpdate: ({ editor }) => onContentChange(editor.getMarkdown()),
+    // Memoised: `useEditor` diffs its options on every render and pushes any
+    // change straight through to the ProseMirror view.
+    editorProps: useMemo(() => ({ attributes: { class: 'tiptap-body' } }), []),
+  })
 
   return (
     <article className="mx-auto w-full max-w-3xl px-4 py-8 sm:px-12 sm:py-12">
@@ -74,12 +54,18 @@ export function NoteEditor({
         icon={note.icon}
         onTitleChange={onTitleChange}
         onIconChange={onIconChange}
-        onCommit={() => editor.focus()}
+        onCommit={() => editor?.commands.focus('start')}
       />
 
-      <div className={isHydrated ? undefined : 'invisible'}>
-        <BlockNoteView editor={editor} theme={resolvedTheme} onChange={() => void handleChange()} />
-      </div>
+      <EditorContent editor={editor} />
+
+      {editor && (
+        <>
+          <FormatMenu editor={editor} />
+          <TableMenu editor={editor} />
+          <SuggestionMenu controller={suggestions} />
+        </>
+      )}
     </article>
   )
 }
