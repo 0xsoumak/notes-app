@@ -8,6 +8,7 @@ React 19 · TypeScript · Vite · Tailwind v4 · BlockNote · dnd-kit · Dexie �
 Phosphor icons
 
 ```bash
+cp .env.example .env   # set VITE_GITHUB_OWNER / VITE_GITHUB_REPO
 pnpm dev      # dev server
 pnpm build    # typecheck + production build
 pnpm test     # unit tests (tree logic)
@@ -85,11 +86,16 @@ between syncs would need real merging.
 
 ### Credentials
 
-The token, owner, repo, and branch live in `localStorage` and are read only
-through `features/workspace/github/github-config.ts`. Nothing is read from
-`.env` — a client-side bundle cannot hold a secret, so a `VITE_`-prefixed
-token would be compiled into `dist/` for anyone to read. Moving to GitHub
-OAuth later means changing that one module.
+The repository is fixed per deployment: `VITE_GITHUB_OWNER` and
+`VITE_GITHUB_REPO` come from `.env` (copy `.env.example`) and are baked into
+the build. Only the **token** and the **branch** (`main` or `dev`) are set in
+Settings, and both live in `localStorage`.
+
+The token is deliberately *not* an env var — a client-side bundle cannot hold
+a secret, so a `VITE_`-prefixed token would be compiled into `dist/` for
+anyone to read. Everything is read through
+`features/workspace/github/github-config.ts`, so moving to GitHub OAuth later
+means changing that one module.
 
 ### Drag and drop
 

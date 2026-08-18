@@ -10,7 +10,14 @@ export { useWorkspace } from './hooks/use-workspace'
 export { WorkspaceProvider } from './store/WorkspaceProvider'
 export { SyncProvider } from './sync/SyncProvider'
 export { useSync } from './sync/sync-context'
-export { DEFAULT_BRANCH } from './github/github-config'
-export type { GitHubConfig } from './github/github-config'
+export {
+  BRANCHES,
+  buildConfig,
+  DEFAULT_BRANCH,
+  isRepoConfigured,
+  REPO_NAME,
+  REPO_OWNER,
+} from './github/github-config'
+export type { Branch, GitHubConfig } from './github/github-config'
 export { isFolder, isNote } from './types'
 export type { FolderItem, NoteItem, WorkspaceItem } from './types'

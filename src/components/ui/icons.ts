@@ -6,6 +6,7 @@
  */
 export {
   ArrowCounterClockwise as RevertIcon,
+  CaretDown as CaretDownIcon,
   CaretRight as CaretRightIcon,
   ArrowsClockwiseIcon as SyncIcon,
   Spinner as SpinnerIcon,
